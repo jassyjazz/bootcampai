@@ -22,7 +22,6 @@ if not st.session_state.password_entered:
     if password == "bootcamp123":
         st.session_state.password_entered = True
         st.success("Password correct! You have access to the app.")
-        st.experimental_rerun()  # Rerun to load content after password is entered
     elif password != "":
         st.error("Incorrect password. Please try again.")
     st.stop()  # Stop the app from rendering further content if the password is incorrect
