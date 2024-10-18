@@ -168,44 +168,44 @@ elif page == "HDB Resale Flat Search":
         and the app will display matching resale flats based on data from data.gov.sg.
     """)
 
-    # Personalizing flat search with user inputs
-    budget = st.slider(
-        "Select your budget (SGD):",
-        min_value=100000,
-        max_value=2000000,
-        step=50000
-    )
+# Personalizing flat search with user inputs
+budget = st.slider(
+    "Select your budget (SGD):",
+    min_value=100000,
+    max_value=2000000,
+    step=50000
+)
 
-    # Display the formatted budget with commas as thousand separators and currency symbol
-    formatted_budget = f"SGD ${budget:,.0f}"
-    st.write(f"Your selected budget: {formatted_budget}")
-    town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
-    flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
+# Display the formatted budget with commas as thousand separators and currency symbol
+formatted_budget = f"SGD ${budget:,.0f}"
+st.write(f"Your selected budget: {formatted_budget}")
+town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
+flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
 
-    def get_resale_flats_by_budget(budget, town, flat_type):
-        datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=100"
+def get_resale_flats_by_budget(budget, town, flat_type):
+    datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
+    url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=100"
+    
+    try:
+        response = requests.get(url)
+        data = response.json()
+        flats = data["result"]["records"]
+        filtered_flats = []
+
+        for flat in flats:
+            price = int(flat["resale_price"])
+            if price <= budget and (town == "Any" or flat["town"] == town) and (flat_type == "Any" or flat["flat_type"] == flat_type):
+                filtered_flats.append(flat)
         
-        try:
-            response = requests.get(url)
-            data = response.json()
-            flats = data["result"]["records"]
-            filtered_flats = []
+        return filtered_flats
+    except Exception as e:
+        st.error(f"Error fetching resale flat data: {str(e)}")
+        return []
 
-            for flat in flats:
-                price = int(flat["resale_price"])
-                if price <= budget and (town == "Any" or flat["town"] == town) and (flat_type == "Any" or flat["flat_type"] == flat_type):
-                    filtered_flats.append(flat)
-            
-            return filtered_flats
-        except Exception as e:
-            st.error(f"Error fetching resale flat data: {str(e)}")
-            return []
-
-    filtered_flats = get_resale_flts_by_budget(budget, town, flat_type)
-    if filtered_flats:
-        st.write(f"Found {len(filtered_flats)} matching flats:")
-        flats_df = pd.DataFrame(filtered_flats)
-        st.dataframe(flats_df)
-    else:
-        st.write("No flats found within your budget and preferences.")
+filtered_flats = get_resale_flats_by_budget(budget, town, flat_type)  # Corrected function name
+if filtered_flats:
+    st.write(f"Found {len(filtered_flats)} matching flats:")
+    flats_df = pd.DataFrame(filtered_flats)
+    st.dataframe(flats_df)
+else:
+    st.write("No flats found within your budget and preferences.")
