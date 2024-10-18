@@ -14,13 +14,9 @@ import json
 from datetime import datetime, timedelta
 import os
 import re
-from openai import OpenAI as OpenAIClient
 
 # Set up OpenAI API key
 os.environ["OPENAI_API_KEY"] = st.secrets["general"]["OPENAI_API_KEY"]
-
-# Initialize OpenAI client
-openai_client = OpenAIClient()
 
 # Set page config
 st.set_page_config(page_title="HDB Resale Flat Guide", layout="wide")
@@ -28,11 +24,10 @@ st.set_page_config(page_title="HDB Resale Flat Guide", layout="wide")
 # Web scraping function
 @st.cache_data(ttl=86400)  # Cache for 24 hours
 def scrape_hdb_website():
-    url = "https://www.hdb.gov.sg/residential/buying-a-flat/resale/getting-started"
+    url = "https://www.hdb.gov.sg/cs/infoweb/residential/buying-a-flat/buying-procedure-for-resale-flats/overview"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
     # Extract relevant information from the webpage
-    # This is a simplified example; you'll need to adjust based on the actual structure of the HDB website
     content = soup.find('div', class_='content-area').get_text()
     return content
 
@@ -100,7 +95,7 @@ tools = [
     Tool(
         name="Search",
         func=search_info,
-        description="useful for when you need to answer questions about HDB resale flat buying process"
+        description="Useful for answering questions about the HDB resale flat buying process."
     )
 ]
 
@@ -124,24 +119,16 @@ class CustomOutputParser(AgentOutputParser):
         # Return the action and action input
         return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
-# Set up the agent
-class OpenAIWrapper:
-    def __init__(self, client, model):
-        self.client = client
-        self.model = model
+# Initialize the LLM using LangChain's OpenAI wrapper
+llm = OpenAI(model="gpt-4", temperature=0)
 
-    def __call__(self, prompt):
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
-
-llm = OpenAIWrapper(openai_client, "gpt-4o-mini")  # Use the appropriate model name
+# Define the prompt for the LLMChain
 prompt = CustomPromptTemplate(template=template, tools=tools, input_variables=["input", "intermediate_steps"])
 
+# Create the LLMChain
 llm_chain = LLMChain(llm=llm, prompt=prompt)
 
+# Set up the agent
 tool_names = [tool.name for tool in tools]
 agent = LLMSingleActionAgent(
     llm_chain=llm_chain, 
@@ -150,6 +137,7 @@ agent = LLMSingleActionAgent(
     allowed_tools=tool_names
 )
 
+# Create the AgentExecutor
 agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
 # Define the pages
