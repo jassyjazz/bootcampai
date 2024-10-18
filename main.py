@@ -153,7 +153,16 @@ elif page == "HDB Resale Flat Search":
     """)
 
     # Personalizing flat search with user inputs
-    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="$%{value:,.0f}")
+    budget = st.slider(
+    "Select your budget (SGD):",
+    min_value=100000,
+    max_value=2000000,
+    step=50000
+    )
+
+    # Display the formatted budget with commas as thousand separators and currency symbol
+    formatted_budget = f"SGD ${budget:,.0f}"
+    st.write(f"Your selected budget: {formatted_budget}")
     town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
     flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
 
