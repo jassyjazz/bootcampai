@@ -7,7 +7,6 @@ import pandas as pd
 from langchain.prompts import PromptTemplate
 from langchain_openai import OpenAI
 from langchain.agents import Tool
-from langchain.runnables import RunnablePassthrough
 from datetime import datetime
 import pytz
 
@@ -69,11 +68,7 @@ prompt_template = PromptTemplate(
 llm = OpenAI(temperature=0, openai_api_key=api_key)
 
 # Create the chain
-chain = (
-    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
-    | prompt_template
-    | llm
-)
+chain = llm | prompt_template
 
 # Streamlit interface
 
@@ -153,7 +148,8 @@ elif page == "HDB resale chatbot":
     user_question = st.text_input("Ask me anything about the HDB resale process:")
     
     if user_question:
-        response = chain.invoke(user_question)
+        relevant_docs = retrieve_relevant_documents(user_question)
+        response = chain.invoke({"relevant_docs": relevant_docs, "question": user_question})
         st.write(response)
 
     st.markdown("""
