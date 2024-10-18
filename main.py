@@ -11,13 +11,20 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
 
-# Password Protection Block
-password = st.text_input("Enter password to access the main page:", type="password")
+# Check if the user has entered the password
+if "password_entered" not in st.session_state:
+    st.session_state.password_entered = False
 
-# If the password is not entered or incorrect, stop the app from loading
-if password != "bootcamp123" and password != "":
-    st.error("Incorrect password. Please try again.")
-    st.stop()
+# Password Protection Block
+if not st.session_state.password_entered:
+    password = st.text_input("Enter password to access the main page:", type="password")
+    
+    if password == "bootcamp123":
+        st.session_state.password_entered = True
+        st.success("Password correct! You have access to the app.")
+    elif password != "":
+        st.error("Incorrect password. Please try again.")
+    st.stop()  # Stop the app from rendering further content if the password is incorrect
 
 # Proceed with the app if password is correct
 # Function to scrape HDB website content
@@ -181,12 +188,12 @@ elif page == "HDB Resale Flat Search":
         
         try:
             response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()['result']['records']
-            
+            data = response.json()
+            flats = data["result"]["records"]
             filtered_flats = []
-            for flat in data:
-                price = float(flat["resale_price"])
+
+            for flat in flats:
+                price = int(flat["resale_price"])
                 if price <= budget and (town == "Any" or flat["town"] == town) and (flat_type == "Any" or flat["flat_type"] == flat_type):
                     filtered_flats.append(flat)
             
