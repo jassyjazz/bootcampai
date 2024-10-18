@@ -24,7 +24,7 @@ st.set_page_config(page_title="HDB Resale Flat Guide", layout="wide")
 # Web scraping function
 @st.cache_data(ttl=86400)  # Cache for 24 hours
 def scrape_hdb_website():
-    url = "https://www.hdb.gov.sg/residential/buying-a-flat/resale/getting-started"
+    url = "https://www.hdb.gov.sg/cs/infoweb/residential/buying-a-flat/buying-procedure-for-resale-flats/overview"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
     # Extract relevant information from the webpage
