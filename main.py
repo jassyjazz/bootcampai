@@ -98,7 +98,7 @@ elif page == "HDB Resale Flat Search":
     datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
     url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}"
 
-    def get_resale_flats_by_budget(budget, town, flat_type):
+def get_resale_flats_by_budget(budget, town, flat_type):
     try:
         response = requests.get(url)
         response.raise_for_status()
