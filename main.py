@@ -1,11 +1,11 @@
 import openai
 import json
 import streamlit as st
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langchain.llms import OpenAI
-from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
-from langchain.memory import ConversationBufferMemory
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import OpenAI
+from langchain.agents import Tool
+from langchain_core.runnables import RunnablePassthrough
 
 # Check if the OpenAI API key is set in Streamlit secrets
 if "OPENAI_API_KEY" not in st.secrets["general"]:
@@ -62,8 +62,13 @@ prompt_template = PromptTemplate(
 # Initialize the LLM
 llm = OpenAI(temperature=0)
 
-# Create the LLM chain
-chain = LLMChain(llm=llm, prompt=prompt_template)
+# Create the chain
+chain = (
+    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
+    | prompt_template
+    | llm
+    | StrOutputParser()
+)
 
 # Streamlit interface
 st.title("HDB Resale Guide")
@@ -71,6 +76,5 @@ st.title("HDB Resale Guide")
 user_question = st.text_input("Ask a question about the HDB resale process:")
 
 if user_question:
-    relevant_docs = retrieve_relevant_documents(user_question)
-    response = chain.run(relevant_docs=relevant_docs, question=user_question)
+    response = chain.invoke(user_question)
     st.write(response)
