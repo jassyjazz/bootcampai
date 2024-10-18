@@ -1,10 +1,9 @@
 import streamlit as st
-from langchain_community.llms import OpenAI
+from langchain.llms import OpenAI
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
 from langchain.prompts import StringPromptTemplate
 from langchain.chains import LLMChain
 from langchain.schema import AgentAction, AgentFinish
-from langchain_community.llms import OpenAI
 from langchain.agents.agent import AgentOutputParser
 from typing import List, Union
 import pandas as pd
@@ -14,9 +13,14 @@ from bs4 import BeautifulSoup
 import json
 from datetime import datetime, timedelta
 import os
+import re
+from openai import OpenAI as OpenAIClient
 
 # Set up OpenAI API key
 os.environ["OPENAI_API_KEY"] = st.secrets["general"]["OPENAI_API_KEY"]
+
+# Initialize OpenAI client
+openai_client = OpenAIClient()
 
 # Set page config
 st.set_page_config(page_title="HDB Resale Flat Guide", layout="wide")
@@ -109,25 +113,40 @@ class CustomOutputParser(AgentOutputParser):
                 return_values={"output": llm_output.split("Final Answer:")[-1].strip()},
                 log=llm_output,
             )
-
+        
         # Parse out the action and action input
         action_match = re.search(r"Action: (.*?)\nAction Input: (.*)", llm_output, re.DOTALL)
         if not action_match:
             raise ValueError(f"Could not parse LLM output: `{llm_output}`")
         action = action_match.group(1).strip()
         action_input = action_match.group(2)
+        
         # Return the action and action input
         return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
 # Set up the agent
-llm = OpenAI(temperature=0, model_name="gpt-4-0613")
+class OpenAIWrapper:
+    def __init__(self, client, model):
+        self.client = client
+        self.model = model
+
+    def __call__(self, prompt):
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content
+
+llm = OpenAIWrapper(openai_client, "gpt-4o-mini")  # Use the appropriate model name
 prompt = CustomPromptTemplate(template=template, tools=tools, input_variables=["input", "intermediate_steps"])
+
 llm_chain = LLMChain(llm=llm, prompt=prompt)
+
 tool_names = [tool.name for tool in tools]
 agent = LLMSingleActionAgent(
-    llm_chain=llm_chain,
+    llm_chain=llm_chain, 
     output_parser=CustomOutputParser(),
-    stop=["\nObservation:"],
+    stop=["\nObservation:"], 
     allowed_tools=tool_names
 )
 
