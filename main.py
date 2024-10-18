@@ -7,8 +7,6 @@ from langchain.llms import OpenAI
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
 from langchain.memory import ConversationBufferMemory
 
- 
-
 # Check if the OpenAI API key is set in Streamlit secrets
 if "OPENAI_API_KEY" not in st.secrets["general"]:
     st.error("OpenAI API key not found in Streamlit secrets. Please set the OPENAI_API_KEY in the app's secrets.")
@@ -54,7 +52,25 @@ tools = [
 # Define prompt template for the agent
 prompt_template = PromptTemplate(
     input_variables=["relevant_docs", "question"],
-    template="""You are an AI assistant guiding users through the HDB resale process in Singapore.
-Use the following information to answer the user's question:
+    template='You are an AI assistant guiding users through the HDB resale process in Singapore. '
+             'Use the following information to answer the user\'s question:\n\n'
+             '{relevant_docs}\n\n'
+             'Human: {question}\n'
+             'AI: '
+)
 
-{relevant_docs}
+# Initialize the LLM
+llm = OpenAI(temperature=0)
+
+# Create the LLM chain
+chain = LLMChain(llm=llm, prompt=prompt_template)
+
+# Streamlit interface
+st.title("HDB Resale Guide")
+
+user_question = st.text_input("Ask a question about the HDB resale process:")
+
+if user_question:
+    relevant_docs = retrieve_relevant_documents(user_question)
+    response = chain.run(relevant_docs=relevant_docs, question=user_question)
+    st.write(response)
