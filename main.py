@@ -1,5 +1,5 @@
 import streamlit as st
-from langchain.llms import OpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
 from langchain.prompts import StringPromptTemplate
 from langchain.chains import LLMChain
@@ -24,7 +24,7 @@ st.set_page_config(page_title="HDB Resale Flat Guide", layout="wide")
 # Web scraping function
 @st.cache_data(ttl=86400)  # Cache for 24 hours
 def scrape_hdb_website():
-    url = "https://www.hdb.gov.sg/cs/infoweb/residential/buying-a-flat/buying-procedure-for-resale-flats/overview"
+    url = "https://www.hdb.gov.sg/residential/buying-a-flat/resale/getting-started"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
     # Extract relevant information from the webpage
@@ -119,8 +119,8 @@ class CustomOutputParser(AgentOutputParser):
         # Return the action and action input
         return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
-# Initialize the LLM using LangChain's OpenAI wrapper
-llm = OpenAI(model="gpt-4", temperature=0)
+# Initialize the chat model using LangChain's `ChatOpenAI` wrapper for chat models
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)  # Use the "gpt-4o-mini" model
 
 # Define the prompt for the LLMChain
 prompt = CustomPromptTemplate(template=template, tools=tools, input_variables=["input", "intermediate_steps"])
