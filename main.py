@@ -80,7 +80,7 @@ prompt_template = PromptTemplate(
 )
 
 chain = (
-    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough() }
+    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
     | prompt_template
     | llm
     | StrOutputParser()
@@ -88,7 +88,7 @@ chain = (
 
 # Streamlit App Pages
 password = st.text_input("Enter password to access the main page:", type="password")
-if password and password != "bootcamp123":
+if password != "bootcamp123":
     st.error("Incorrect password. Please try again.")
     st.stop()
 
@@ -111,8 +111,13 @@ if page == "Home":
     st.header("Welcome to the HDB Resale Guide!")
     st.write("""
     This application is designed to help you navigate the process of buying an HDB flat in the resale market.
-    Whether you're just starting or looking for specific information, we provide useful tools like the HDB Resale Chatbot and a resale flat search function.
-    Explore the pages to get started!
+    You can learn about the buying procedure, interact with a virtual assistant, and search for available flats based on your budget.
+    
+    To get started, you can explore the following pages:
+    - **HDB Resale Chatbot**: Chat with our AI assistant about the HDB resale process.
+    - **HDB Resale Flat Search**: Search for available resale flats based on your budget and preferences.
+    - **About Us**: Learn more about our project, objectives, and data sources.
+    - **Methodology**: Understand the data flows and see the process flowcharts for each use case.
     """)
 
 elif page == "About Us":
@@ -133,7 +138,7 @@ elif page == "Methodology":
     2. **HDB Resale Flat Search**: 
         - User selects budget → Data fetched from data.gov.sg → Filter flats within budget → Display relevant flats.
     """)
-
+    
     # Flowchart for Use Cases (Illustrative Example)
     st.write("Flowchart for Use Cases:")
     st.image("methodology_flowchart.png")  # You can generate this from a tool like Graphviz.
@@ -141,8 +146,9 @@ elif page == "Methodology":
 elif page == "HDB Resale Chatbot":
     st.header("HDB Resale Chatbot")
     st.write("""
-    Hi! I am XX, your virtual HDB assistant. I’m here to help you understand the process of buying an HDB flat in the resale market.
-    You can ask me anything related to eligibility, buying procedures, and more. Just type your question, and I will help you out!
+    Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process.
+    Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, just ask me anything.
+    I'm here to guide you every step of the way. Simply type your question below, and I'll provide you with the information you need.
     """)
 
     user_question = st.text_input("Ask a question about the HDB resale process:")
@@ -161,12 +167,12 @@ elif page == "HDB Resale Flat Search":
     """)
 
     # Personalizing flat search with user inputs
-    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="%.0f")
+    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000)
     town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
     flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
     
     datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-    url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}"  # Removed the limit of 100 entries
+    url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=100"
     
     def get_resale_flats_by_budget(budget, town, flat_type):
         try:
@@ -187,6 +193,4 @@ elif page == "HDB Resale Flat Search":
             else:
                 st.write("No flats found matching your criteria.")  # Fixed the string error
         except Exception as e:
-            st.error(f"Error fetching flats: {str(e)}")
-
-    get_resale_flats_by_budget(budget, town, flat_type)
+            st.error(f"Error fetching flats data: {
