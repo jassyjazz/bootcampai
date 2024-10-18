@@ -49,7 +49,9 @@ tools = [
 ]
 
 # Define prompt template for the agent
-prompt_template = """You are an AI assistant guiding users through the HDB resale process in Singapore. 
+prompt_template = PromptTemplate(
+    input_variables=["relevant_docs", "question"],
+    template="""You are an AI assistant guiding users through the HDB resale process in Singapore. 
 Use the following information to answer the user's question:
 
 {relevant_docs}
