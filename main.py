@@ -193,4 +193,8 @@ elif page == "HDB Resale Flat Search":
             else:
                 st.write("No flats found matching your criteria.")  # Fixed the string error
         except Exception as e:
-            st.error(f"Error fetching flats data: {
+            st.error(f"Error fetching flats data: {str(e)}")
+    
+    # Trigger the search
+    if st.button("Search Flats"):
+        get_resale_flats_by_budget(budget, town, flat_type)
