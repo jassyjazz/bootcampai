@@ -185,4 +185,9 @@ elif page == "HDB Resale Flat Search":
                 df["resale_price"] = df["resale_price"].apply(lambda x: f"${int(x):,}")
                 st.dataframe(df, width=1000)  # Set a larger table width
             else:
-                st.write("No flats found matching your criteria
+                st.write("No flats found matching your criteria.")  # Fixed the string error
+        except Exception as e:
+            st.error(f"Error fetching flats data: {str(e)}")
+    
+    # Execute flat search based on user inputs
+    get_resale_flats_by_budget(budget, town, flat_type)
