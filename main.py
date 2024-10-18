@@ -6,7 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import OpenAI
+from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
 
@@ -85,9 +85,9 @@ prompt_template = PromptTemplate(
              'AI: '
 )
 
-# Initialize the LLM with gpt-4o-mini model
-llm = OpenAI(
-    model="gpt-4o-mini",  # Specify the gpt-4o-mini model here
+# Initialize the LLM with gpt-4o-mini chat model
+llm = ChatOpenAI(
+    model="gpt-4o-mini",  # Specify the gpt-4o-mini chat model here
     temperature=0, 
     openai_api_key=st.secrets["general"]["OPENAI_API_KEY"]
 )
