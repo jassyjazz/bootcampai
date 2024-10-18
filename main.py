@@ -4,6 +4,7 @@ from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
 from langchain.prompts import StringPromptTemplate
 from langchain.chains import LLMChain
 from langchain.schema import AgentAction, AgentFinish
+from langchain.output_parsers import RegexParser
 import pandas as pd
 import plotly.express as px
 import requests
@@ -97,6 +98,12 @@ tools = [
     )
 ]
 
+# Define the output parser
+output_parser = RegexParser(
+    regex=r"Action: (.*?)\nAction Input: (.*?)\nObservation: (.*?)\nThought: (.*?)\nFinal Answer: (.*)",
+    output_keys=["action", "action_input", "observation", "thought", "final_answer"],
+)
+
 # Set up the agent
 llm = OpenAI(temperature=0, model_name="gpt-4o-mini")
 prompt = CustomPromptTemplate(template=template, tools=tools, input_variables=["input", "intermediate_steps"])
@@ -106,7 +113,7 @@ llm_chain = LLMChain(llm=llm, prompt=prompt)
 tool_names = [tool.name for tool in tools]
 agent = LLMSingleActionAgent(
     llm_chain=llm_chain, 
-    output_parser=None,
+    output_parser=output_parser,
     stop=["\nObservation:"], 
     allowed_tools=tool_names
 )
