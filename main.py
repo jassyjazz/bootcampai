@@ -90,6 +90,8 @@ chain = (
 
 # Password Protection
 password = st.text_input("Enter password to access the main page:", type="password")
+
+# If the password is incorrect, stop the execution immediately.
 if password != "bootcamp123" and password != "":
     st.error("Incorrect password. Please try again.")
     st.stop()
