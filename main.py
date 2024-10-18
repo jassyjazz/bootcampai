@@ -98,6 +98,7 @@ if password != "bootcamp123" and password != "":
 elif password == "":
     st.write("Please enter your password to proceed.")
 
+# The rest of the app logic starts only if the password is correct
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
 
 # Dynamic title based on the selected page
@@ -190,7 +191,6 @@ elif page == "HDB Resale Flat Search":
             data = response.json()['result']['records']
             filtered_flats = []
             for flat in data:
-                # Filter based on user selection
                 if (budget is None or int(flat['resale_price']) <= budget) and \
                    (town.lower() in flat['town'].lower()) and \
                    (flat_type.lower() in flat['flat_type'].lower()):
