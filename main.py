@@ -95,16 +95,7 @@ if password and password != "bootcamp123":
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
 
 # Dynamic title based on the selected page
-if page == "Home":
-    st.title("Welcome to the HDB Resale Guide!")
-elif page == "About Us":
-    st.title("About Us - HDB Resale Guide")
-elif page == "Methodology":
-    st.title("Methodology - HDB Resale Guide")
-elif page == "HDB Resale Chatbot":
-    st.title("HDB Resale Chatbot")
-elif page == "HDB Resale Flat Search":
-    st.title("HDB Resale Flat Search")
+st.title("HDB Resale Guide")  # Only one title at the top
 
 # Handle content for each page
 if page == "Home":
@@ -195,4 +186,4 @@ elif page == "HDB Resale Flat Search":
     
     # Execute flat search based on user inputs
     if st.button("Search Flats"):
-        get_resale_flats_by_budget(budget, town, flat_type
+        get_resale_flats_by_budget(budget, town, flat_type)
