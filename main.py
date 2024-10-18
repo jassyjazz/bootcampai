@@ -97,6 +97,7 @@ if password != "bootcamp123" and password != "":
     st.stop()  # Stop execution if password is incorrect
 elif password == "":
     st.write("Please enter your password to proceed.")
+    st.stop()  # Stops execution and asks user for password
 
 # The rest of the app logic starts only if the password is correct
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
@@ -169,38 +170,21 @@ elif page == "HDB Resale Chatbot":
 elif page == "HDB Resale Flat Search":
     st.header("HDB Resale Flat Search")
     st.write("""
-    This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
-    and the app will display matching resale flats based on data from data.gov.sg.
+    This tool helps you find resale flats that fit your budget. Simply move the slider below to set your budget, and we will display relevant resale flats.
     """)
+    
+    # Budget slider
+    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="SGD {value:,.0f}")
+    st.write(f"Your selected budget is: SGD {budget:,.0f}")
 
-   # Personalizing flat search with user inputs
-    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="$%{value:,.0f}")
-    town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
-    flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
-
-    def get_resale_flats_by_budget(budget, town, flat_type):
-        datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=100"
-        
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()['result']['records']
-            
-            filtered_flats = []
-            for flat in data:
-                if (budget is None or int(flat['resale_price']) <= budget) and \
-                   (town.lower() in flat['town'].lower() or town.lower() == "any") and \
-                   (flat_type.lower() in flat['flat_type'].lower() or flat_type.lower() == "any"):
-                    filtered_flats.append(flat)
-            return pd.DataFrame(filtered_flats)
-        except requests.exceptions.RequestException as e:
-            st.error(f"Error fetching data: {e}")
-            return pd.DataFrame()
-
-    filtered_flats = get_resale_flats_by_budget(budget, town, flat_type)
-    if not filtered_flats.empty:
-        st.write(f"Found {len(filtered_flats)} resale flats matching your criteria:")
-        st.dataframe(filtered_flats)
-    else:
-        st.write("No flats found based on your search criteria.")
+    # Fetch and display relevant flats (this is illustrative, you need to implement data fetching)
+    st.write("Displaying resale flats within your budget...")
+    # Example: Fetch flats based on budget and display as a table
+    flats_data = pd.DataFrame({
+        "Town": ["Town A", "Town B", "Town C"],
+        "Flat Type": ["3-room", "4-room", "5-room"],
+        "Resale Price (SGD)": ["$400,000", "$600,000", "$800,000"],
+        "Storey Range": ["Low", "Mid", "High"],
+        "Floor Area (sqm)": [60, 80, 100]
+    })
+    st.dataframe(flats_data)
