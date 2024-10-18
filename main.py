@@ -4,7 +4,9 @@ from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
 from langchain.prompts import StringPromptTemplate
 from langchain.chains import LLMChain
 from langchain.schema import AgentAction, AgentFinish
-from langchain.output_parsers import RegexParser
+from langchain_community.llms import OpenAI
+from langchain.agents.agent import AgentOutputParser
+from typing import List, Union
 import pandas as pd
 import plotly.express as px
 import requests
@@ -99,22 +101,33 @@ tools = [
 ]
 
 # Define the output parser
-output_parser = RegexParser(
-    regex=r"Action: (.*?)\nAction Input: (.*?)\nObservation: (.*?)\nThought: (.*?)\nFinal Answer: (.*)",
-    output_keys=["action", "action_input", "observation", "thought", "final_answer"],
-)
+class CustomOutputParser(AgentOutputParser):
+    def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
+        # Check if agent has finished
+        if "Final Answer:" in llm_output:
+            return AgentFinish(
+                return_values={"output": llm_output.split("Final Answer:")[-1].strip()},
+                log=llm_output,
+            )
+
+        # Parse out the action and action input
+        action_match = re.search(r"Action: (.*?)\nAction Input: (.*)", llm_output, re.DOTALL)
+        if not action_match:
+            raise ValueError(f"Could not parse LLM output: `{llm_output}`")
+        action = action_match.group(1).strip()
+        action_input = action_match.group(2)
+        # Return the action and action input
+        return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
 # Set up the agent
-llm = OpenAI(temperature=0, model_name="gpt-4o-mini")
+llm = OpenAI(temperature=0, model_name="gpt-4-0613")
 prompt = CustomPromptTemplate(template=template, tools=tools, input_variables=["input", "intermediate_steps"])
-
 llm_chain = LLMChain(llm=llm, prompt=prompt)
-
 tool_names = [tool.name for tool in tools]
 agent = LLMSingleActionAgent(
-    llm_chain=llm_chain, 
-    output_parser=output_parser,
-    stop=["\nObservation:"], 
+    llm_chain=llm_chain,
+    output_parser=CustomOutputParser(),
+    stop=["\nObservation:"],
     allowed_tools=tool_names
 )
 
