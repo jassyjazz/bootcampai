@@ -3,6 +3,7 @@ import json
 import streamlit as st
 import os
 import requests
+import pandas as pd
 from bs4 import BeautifulSoup
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -86,10 +87,21 @@ chain = (
 )
 
 # Streamlit App Pages
-st.title("HDB Resale Guide")
-
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
 
+# Dynamic title based on the selected page
+if page == "Home":
+    st.title("Welcome to the HDB Resale Guide!")
+elif page == "About Us":
+    st.title("About Us - HDB Resale Guide")
+elif page == "Methodology":
+    st.title("Methodology - HDB Resale Guide")
+elif page == "HDB Resale Chatbot":
+    st.title("HDB Resale Chatbot")
+elif page == "HDB Resale Flat Search":
+    st.title("HDB Resale Flat Search")
+
+# Handle content for each page
 if page == "Home":
     st.write("Welcome to the HDB Resale Guide!")
     st.write("Choose a use case to get started:")
@@ -124,22 +136,32 @@ elif page == "HDB Resale Chatbot":
         st.write(response)
 
 elif page == "HDB Resale Flat Search":
+    # Personalizing flat search with user inputs
     budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=1500000, step=50000)
+    town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
+    flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
+    
     datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
     url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=100"
     
-    def get_resale_flats_by_budget(budget):
+    def get_resale_flats_by_budget(budget, town, flat_type):
         try:
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()['result']['records']
-            filtered_flats = [flat for flat in data if int(flat['resale_price']) <= budget]
+            filtered_flats = []
+            for flat in data:
+                # Filter based on user budget, town, and flat type
+                if int(flat['resale_price']) <= budget and (town == "Any" or flat['town'] == town) and (flat_type == "Any" or flat['flat_type'] == flat_type):
+                    filtered_flats.append(flat)
+            
+            # Display data in a table
             if filtered_flats:
-                for flat in filtered_flats:
-                    st.write(f"Town: {flat['town']}, Flat Type: {flat['flat_type']}, Price: {flat['resale_price']}")
+                df = pd.DataFrame(filtered_flats, columns=["town", "flat_type", "resale_price", "storey_range", "floor_area_sqm"])
+                st.dataframe(df)
             else:
-                st.write("No flats found within this budget range.")
+                st.write("No flats found matching your criteria.")
         except Exception as e:
             st.error(f"Error fetching resale flats: {str(e)}")
 
-    get_resale_flats_by_budget(budget)
+    get_resale_flats_by_budget(budget, town, flat_type)
