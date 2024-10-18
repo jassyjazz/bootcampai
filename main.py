@@ -1,6 +1,7 @@
 import openai
 import json
 import streamlit as st
+import os
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import OpenAI
@@ -13,7 +14,9 @@ if "OPENAI_API_KEY" not in st.secrets["general"]:
     st.stop()
 
 # Set OpenAI API key from Streamlit secrets
-openai.api_key = st.secrets["general"]["OPENAI_API_KEY"]
+api_key = st.secrets["general"]["OPENAI_API_KEY"]
+openai.api_key = api_key
+os.environ["OPENAI_API_KEY"] = api_key
 
 # Load the document for RAG from JSON
 def load_document():
@@ -59,8 +62,8 @@ prompt_template = PromptTemplate(
              'AI: '
 )
 
-# Initialize the LLM
-llm = OpenAI(temperature=0)
+# Initialize the LLM with explicit API key
+llm = OpenAI(temperature=0, openai_api_key=api_key)
 
 # Create the chain
 chain = (
