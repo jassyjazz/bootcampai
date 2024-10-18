@@ -88,6 +88,7 @@ chain = (
 
 # Streamlit App Pages
 password = st.text_input("Enter password to access the main page:", type="password")
+
 if password and password != "bootcamp123":
     st.error("Incorrect password. Please try again.")
     st.stop()
@@ -95,16 +96,26 @@ if password and password != "bootcamp123":
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
 
 # Dynamic title based on the selected page
-st.title("HDB Resale Guide")  # Only one title at the top
+if page == "Home":
+    st.title("Welcome to the HDB Resale Guide!")
+elif page == "About Us":
+    st.title("About Us - HDB Resale Guide")
+elif page == "Methodology":
+    st.title("Methodology - HDB Resale Guide")
+elif page == "HDB Resale Chatbot":
+    st.title("HDB Resale Chatbot")
+elif page == "HDB Resale Flat Search":
+    st.title("HDB Resale Flat Search")
 
 # Handle content for each page
 if page == "Home":
     st.header("Welcome to the HDB Resale Guide!")
     st.write("""
+    This application is designed to help you navigate the process of buying an HDB flat in the resale market.
     You can learn about the buying procedure, interact with a virtual assistant, and search for available flats based on your budget.
     
     To get started, you can explore the following pages:
-    - **HDB Resale Chatbot**: Chat with our AI assistant about the HDB resale process.
+    - **HDB Resale Chatbot**: Chat with our virtual assistant about the HDB resale process.
     - **HDB Resale Flat Search**: Search for available resale flats based on your budget and preferences.
     - **About Us**: Learn more about our project, objectives, and data sources.
     - **Methodology**: Understand the data flows and see the process flowcharts for each use case.
@@ -128,19 +139,20 @@ elif page == "Methodology":
     2. **HDB Resale Flat Search**: 
         - User selects budget → Data fetched from data.gov.sg → Filter flats within budget → Display relevant flats.
     """)
+    
     # Flowchart for Use Cases (Illustrative Example)
     st.write("Flowchart for Use Cases:")
     st.image("methodology_flowchart.png")  # You can generate this from a tool like Graphviz.
 
 elif page == "HDB Resale Chatbot":
-    st.header("Hi! I am Rina, your virtual HDB assistant.")
+    st.header("HDB Resale Chatbot")
     st.write("""
-    I'm here to help you with any questions you have about the HDB resale process. 
-    Whether you're wondering about eligibility, how to apply for a resale flat, or the procedures involved, just ask me anything.
-    I'm here to guide you every step of the way. 
+    Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process.
+    Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, just ask me anything.
+    I'm here to guide you every step of the way. Simply type your question below, and I'll provide you with the information you need.
     """)
 
-    user_question = st.text_input("Ask me a question about the HDB resale process:")
+    user_question = st.text_input("Ask a question about the HDB resale process:")
     if st.button("Submit"):
         if user_question:
             response = chain.invoke(user_question)
@@ -151,17 +163,20 @@ elif page == "HDB Resale Chatbot":
 elif page == "HDB Resale Flat Search":
     st.header("HDB Resale Flat Search")
     st.write("""
-    This tool allows you to search for available HDB resale flats within your budget. 
-    Simply adjust the budget slider, select your preferred town and flat type, and the app will display matching resale flats based on data from data.gov.sg.
+    This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
+    and the app will display matching resale flats based on data from data.gov.sg.
     """)
 
     # Personalizing flat search with user inputs
-    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="###,###")
+    def format_budget(value):
+        return f"${value:,.0f}"
+
+    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="₹{value:,.0f}")
     town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
     flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
     
     datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-    url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=1000"  # Remove limit of 100 entries
+    url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=100"
     
     def get_resale_flats_by_budget(budget, town, flat_type):
         try:
@@ -170,20 +185,19 @@ elif page == "HDB Resale Flat Search":
             data = response.json()['result']['records']
             filtered_flats = []
             for flat in data:
-                # Filter based on user budget, town, and flat type
-                if int(flat['resale_price']) <= budget and (town == "Any" or flat['town'] == town) and (flat_type == "Any" or flat['flat_type'] == flat_type):
+                # Filter based on user selection
+                if (budget is None or int(flat['resale_price']) <= budget) and \
+                   (town.lower() in flat['town'].lower()) and \
+                   (flat_type.lower() in flat['flat_type'].lower()):
                     filtered_flats.append(flat)
-            
-            # Display data in a table with formatted currency
-            if filtered_flats:
-                df = pd.DataFrame(filtered_flats, columns=["town", "flat_type", "resale_price", "storey_range", "floor_area_sqm"])
-                df["resale_price"] = df["resale_price"].apply(lambda x: f"${int(x):,}")
-                st.dataframe(df, width=1000)  # Set a larger table width
-            else:
-                st.write("No flats found matching your criteria.")
+            return pd.DataFrame(filtered_flats)
         except Exception as e:
-            st.error(f"Error fetching flats data: {str(e)}")
-    
-    # Execute flat search based on user inputs
-    if st.button("Search Flats"):
-        get_resale_flats_by_budget(budget, town, flat_type)
+            st.error(f"Error fetching data: {str(e)}")
+            return pd.DataFrame()
+
+    filtered_flats = get_resale_flats_by_budget(budget, town, flat_type)
+    if not filtered_flats.empty:
+        st.write(f"Found {len(filtered_flats)} resale flats matching your criteria:")
+        st.dataframe(filtered_flats)
+    else:
+        st.write("No flats found based on your search criteria.")
