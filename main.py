@@ -27,8 +27,12 @@ def scrape_hdb_website():
     url = "https://www.hdb.gov.sg/cs/infoweb/residential/buying-a-flat/buying-procedure-for-resale-flats/overview"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
-    # Extract relevant information from the webpage
-    content = soup.find('div', class_='content-area').get_text()
+    # Find the element safely
+    content_area = soup.find('div', class_='content-area')
+    if content_area:
+        content = content_area.get_text()
+    else:
+        content = "Unable to scrape content from the HDB website. The structure may have changed."
     return content
 
 # Load JSON data
