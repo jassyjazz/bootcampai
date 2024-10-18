@@ -114,6 +114,11 @@ if page == "Home":
     st.header("Welcome to the HDB Resale Guide!")
     st.write("""This application is designed to help you navigate the process of buying an HDB flat in the resale market.
                 You can learn about the buying procedure, interact with a virtual assistant, and search for available flats based on your budget.
+                To get started, you can explore the following pages:
+                - **HDB Resale Chatbot**: Chat with our virtual assistant about the HDB resale process.
+                - **HDB Resale Flat Search**: Search for available resale flats based on your budget and preferences.
+                - **About Us**: Learn more about our project, objectives, and data sources.
+                - **Methodology**: Understand the data flows and see the process flowcharts for each use case.
                 """)
 elif page == "About Us":
     st.header("About Us")
@@ -177,18 +182,23 @@ elif page == "HDB Resale Flat Search":
             
             filtered_flats = []
             for flat in data:
-                if (budget is None or int(flat['resale_price']) <= budget) and \
-                   (town.lower() in flat['town'].lower() or town.lower() == "any") and \
-                   (flat_type.lower() in flat['flat_type'].lower() or flat_type.lower() == "any"):
-                    filtered_flats.append(flat)
-            return pd.DataFrame(filtered_flats)
+                price = float(flat["resale_price"])
+                if price <= budget:
+                    if (town == "Any" or flat["town"] == town) and (flat_type == "Any" or flat["flat_type"] == flat_type):
+                        filtered_flats.append(flat)
+            return filtered_flats
         except requests.exceptions.RequestException as e:
-            st.error(f"Error fetching data: {e}")
-            return pd.DataFrame()
+            st.error(f"Error fetching data: {str(e)}")
+            return []
 
-    filtered_flats = get_resale_flats_by_budget(budget, town, flat_type)
-    if not filtered_flats.empty:
-        st.write(f"Found {len(filtered_flats)} resale flats matching your criteria:")
-        st.dataframe(filtered_flats)
+    flats = get_resale_flats_by_budget(budget, town, flat_type)
+
+    # Show the filtered results
+    if flats:
+        flat_data = pd.DataFrame(flats)
+        flat_data = flat_data[["town", "flat_type", "block", "street_name", "resale_price", "storey_range", "floor_area_sqm", "remaining_lease"]]
+        flat_data["resale_price"] = flat_data["resale_price"].apply(lambda x: f"${int(x):,}")
+        st.write(flat_data)
     else:
-        st.write("No flats found based on your search criteria.")
+        st.write("No matching flats found.")
+
