@@ -173,31 +173,29 @@ elif page == "HDB Resale Flat Search":
     and the app will display matching resale flats based on data from data.gov.sg.
     """)
 
-    # Personalizing flat search with user inputs
-    def format_budget(value):
-        return f"${value:,.0f}"
-
-    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="$%d")
+   # Personalizing flat search with user inputs
+    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="$%{value:,.0f}")
     town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
     flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
-    
-    datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-    url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=100"
-    
+
     def get_resale_flats_by_budget(budget, town, flat_type):
+        datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
+        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=100"
+        
         try:
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()['result']['records']
+            
             filtered_flats = []
             for flat in data:
                 if (budget is None or int(flat['resale_price']) <= budget) and \
-                   (town.lower() in flat['town'].lower()) and \
-                   (flat_type.lower() in flat['flat_type'].lower()):
+                   (town.lower() in flat['town'].lower() or town.lower() == "any") and \
+                   (flat_type.lower() in flat['flat_type'].lower() or flat_type.lower() == "any"):
                     filtered_flats.append(flat)
             return pd.DataFrame(filtered_flats)
-        except Exception as e:
-            st.error(f"Error fetching data: {str(e)}")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error fetching data: {e}")
             return pd.DataFrame()
 
     filtered_flats = get_resale_flats_by_budget(budget, town, flat_type)
