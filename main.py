@@ -7,6 +7,14 @@ from langchain.llms import OpenAI
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
 from langchain.memory import ConversationBufferMemory
 
+# Check if the OpenAI API key is set in Streamlit secrets
+if "OPENAI_API_KEY" not in st.secrets["general"]:
+    st.error("OpenAI API key not found in Streamlit secrets. Please set the OPENAI_API_KEY in the app's secrets.")
+    st.stop()
+
+# Set OpenAI API key from Streamlit secrets
+openai.api_key = st.secrets["general"]["OPENAI_API_KEY"]
+
 # Load the document for RAG from JSON
 def load_document():
     try:
@@ -27,6 +35,9 @@ def retrieve_relevant_documents(user_prompt):
         if any(keyword in user_prompt.lower() for keyword in section.get('keywords', [])):
             relevant_info += f"{section['content']}\n\n"
     return relevant_info or "No relevant information found."
+except Exception as e:
+    st.error(f"Error in document retrieval: {str(e)}")
+    return "Error occurred while retrieving documents."
 
 # Define tools for the LLM agent
 tools = [
