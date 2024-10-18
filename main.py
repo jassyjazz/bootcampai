@@ -11,6 +11,15 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
 
+# Password Protection Block
+password = st.text_input("Enter password to access the main page:", type="password")
+
+# If the password is not entered or incorrect, stop the app from loading
+if password != "bootcamp123" and password != "":
+    st.error("Incorrect password. Please try again.")
+    st.stop()
+
+# Proceed with the app if password is correct
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
 def scrape_hdb_resale_info():
@@ -87,14 +96,6 @@ chain = (
 )
 
 # Streamlit App Pages
-
-# Password Protection
-password = st.text_input("Enter password to access the main page:", type="password")
-
-# If the password is incorrect, stop the execution immediately.
-if password != "bootcamp123" and password != "":
-    st.error("Incorrect password. Please try again.")
-    st.stop()
 
 # After password validation, show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
@@ -186,9 +187,8 @@ elif page == "HDB Resale Flat Search":
             filtered_flats = []
             for flat in data:
                 price = float(flat["resale_price"])
-                if price <= budget:
-                    if (town == "Any" or flat["town"] == town) and (flat_type == "Any" or flat["flat_type"] == flat_type):
-                        filtered_flats.append(flat)
+                if price <= budget and (town == "Any" or flat["town"] == town) and (flat_type == "Any" or flat["flat_type"] == flat_type):
+                    filtered_flats.append(flat)
             
             return filtered_flats
         except Exception as e:
