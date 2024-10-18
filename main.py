@@ -24,7 +24,7 @@ if not st.session_state.password_entered:
         st.success("Password correct! You have access to the app.")
     elif password != "":
         st.error("Incorrect password. Please try again.")
-    st.stop()  # Stop the app from rendering further content if the password is incorrect
+    st.stop()  # Prevent the app from rendering if the password isn't entered correctly
 
 # Proceed with the app if password is correct
 # Function to scrape HDB website content
@@ -202,7 +202,7 @@ elif page == "HDB Resale Flat Search":
             st.error(f"Error fetching resale flat data: {str(e)}")
             return []
 
-    filtered_flats = get_resale_flats_by_budget(budget, town, flat_type)
+    filtered_flats = get_resale_flts_by_budget(budget, town, flat_type)
     if filtered_flats:
         st.write(f"Found {len(filtered_flats)} matching flats:")
         flats_df = pd.DataFrame(filtered_flats)
