@@ -1,0 +1,75 @@
+{
+    "steps": [
+        {
+            "step": 1,
+            "title": "Obtain an HDB Flat Eligibility (HFE) Letter",
+            "details": [
+                "Apply for an HFE letter on the My Flat Dashboard for an overview of housing and financing options.",
+                "This letter informs you of your eligibility to purchase a flat, CPF housing grants, and HDB housing loans.",
+                "You can request an In-Principle Approval (IPA) from financial institutions when applying for the HFE letter."
+            ]
+        },
+        {
+            "step": 2,
+            "title": "Search for a Flat and Obtain an Option to Purchase (OTP)",
+            "details": [
+                "Search for flats on the HDB Flat Portal or use a salesperson's service.",
+                "Obtain an OTP from the seller after agreeing on the price (the seller must have registered an Intent to Sell for at least 7 days)."
+            ]
+        },
+        {
+            "step": 3,
+            "title": "Confirm mode of financing",
+            "details": [
+                "If using an HDB loan, ensure your HFE letter reflects this.",
+                "If using a financial institution loan, secure a Letter of Offer (LO) before exercising the OTP.",
+                "You may concurrently request an IPA and LO from financial institutions when applying for the HFE letter."
+            ]
+        },
+        {
+            "step": 4,
+            "title": "Submit Request for Value",
+            "details": [
+                "If paying with CPF savings and/or a loan, submit a Request for Value by the next working day after receiving the OTP."
+            ]
+        },
+        {
+            "step": 5,
+            "title": "Convert In-Principle Approval (IPA) into a Letter of Offer (LO)",
+            "details": [
+                "If an IPA was requested earlier, convert it into an LO before exercising the OTP during the Option Period."
+            ]
+        },
+        {
+            "step": 6,
+            "title": "Submit resale application",
+            "details": [
+                "Both buyer and seller must submit their respective portions of the resale application after the OTP is exercised."
+            ]
+        },
+        {
+            "step": 7,
+            "title": "Acknowledge resale documents and pay fees",
+            "details": [
+                "After HDB verifies the complete resale application, both parties must acknowledge and endorse the resale documents, which will be ready around 3 weeks after application acceptance.",
+                "Pay any required fees, including administrative costs and legal fees (if applicable)."
+            ]
+        },
+        {
+            "step": 8,
+            "title": "Get resale approval",
+            "details": [
+                "Once documents are endorsed and fees paid, HDB will grant approval for the resale transaction."
+            ]
+        },
+        {
+            "step": 9,
+            "title": "Attend completion appointment",
+            "details": [
+                "The resale transaction is typically completed about 8 weeks after HDB accepts the resale application.",
+                "If you wish to defer the completion, discuss the new date with the seller and submit a written confirmation signed by both parties via MyRequest@HDB.",
+                "You will receive the appointment details via SMS and can also view them on HDB portal (My Flat Dashboard)."
+            ]
+        }
+    ]
+}
