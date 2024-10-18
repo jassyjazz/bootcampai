@@ -87,11 +87,16 @@ chain = (
 )
 
 # Streamlit App Pages
+
+# Password entry and validation
 password = st.text_input("Enter password to access the main page:", type="password")
 
-if password and password != "bootcamp123":
+# Check if the entered password is correct
+if password != "bootcamp123" and password != "":
     st.error("Incorrect password. Please try again.")
-    st.stop()
+    st.stop()  # Stop execution if password is incorrect
+elif password == "":
+    st.write("Please enter your password to proceed.")
 
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
 
@@ -171,7 +176,7 @@ elif page == "HDB Resale Flat Search":
     def format_budget(value):
         return f"${value:,.0f}"
 
-    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="₹{value:,.0f}")
+    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000, format="$%d")
     town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
     flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
     
