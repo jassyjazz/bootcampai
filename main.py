@@ -98,37 +98,26 @@ elif page == "HDB Resale Flat Search":
     datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
     url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}"
 
-def get_resale_flats_by_budget(budget, town, flat_type):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()['result']['records']
-        filtered_flats = []
-        
-        # Ensure budget is an integer
-        budget = int(budget)
-        
-        for flat in data:
-            try:
-                # Convert resale_price to integer for comparison
-                resale_price = int(flat['resale_price'])
-                
-                # Apply filters based on user's criteria
-                if resale_price <= budget and (town == "Any" or flat['town'] == town) and (flat_type == "Any" or flat['flat_type'] == flat_type):
+    def get_resale_flats_by_budget(budget, town, flat_type):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()['result']['records']
+            filtered_flats = []
+            for flat in data:
+                # Filter based on user budget, town, and flat type
+                if int(flat['resale_price']) <= budget and (town == "Any" or flat['town'] == town) and (flat_type == "Any" or flat['flat_type'] == flat_type):
                     filtered_flats.append(flat)
-            except ValueError:
-                continue  # Skip flats with invalid resale_price
-        
-        # Display data in a table with formatted currency
-        if filtered_flats:
-            df = pd.DataFrame(filtered_flats, columns=["town", "flat_type", "resale_price", "storey_range", "floor_area_sqm"])
-            df["resale_price"] = df["resale_price"].apply(lambda x: f"${int(x):,}")
-            st.dataframe(df, width=1000)  # Set a larger table width
-        else:
-            st.write("No flats found matching your criteria.")  # This message will only show when no results are found
-
-    except Exception as e:
-        st.error(f"Error fetching flats data: {str(e)}")
+            
+            # Display data in a table with formatted currency
+            if filtered_flats:
+                df = pd.DataFrame(filtered_flats, columns=["town", "flat_type", "resale_price", "storey_range", "floor_area_sqm"])
+                df["resale_price"] = df["resale_price"].apply(lambda x: f"${int(x):,}")
+                st.dataframe(df, width=1000)  # Set a larger table width
+            else:
+                st.write("No flats found matching your criteria.")  # Fixed the string error
+        except Exception as e:
+            st.error(f"Error fetching flats data: {str(e)}")
     
     # Execute flat search based on user inputs
     get_resale_flats_by_budget(budget, town, flat_type)
