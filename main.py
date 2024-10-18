@@ -87,6 +87,11 @@ chain = (
 )
 
 # Streamlit App Pages
+password = st.text_input("Enter password to access the main page:", type="password")
+if password != "bootcamp123":
+    st.error("Incorrect password. Please try again.")
+    st.stop()
+
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
 
 # Dynamic title based on the selected page
@@ -103,8 +108,12 @@ elif page == "HDB Resale Flat Search":
 
 # Handle content for each page
 if page == "Home":
-    st.write("Welcome to the HDB Resale Guide!")
-    st.write("Choose a use case to get started:")
+    st.header("Welcome to the HDB Resale Guide!")
+    st.write("""
+    This application is designed to help you navigate the process of buying an HDB flat in the resale market.
+    Whether you're just starting or looking for specific information, we provide useful tools like the HDB Resale Chatbot and a resale flat search function.
+    Explore the pages to get started!
+    """)
 
 elif page == "About Us":
     st.header("About Us")
@@ -130,14 +139,29 @@ elif page == "Methodology":
     st.image("methodology_flowchart.png")  # You can generate this from a tool like Graphviz.
 
 elif page == "HDB Resale Chatbot":
+    st.header("HDB Resale Chatbot")
+    st.write("""
+    The HDB Resale Chatbot is an AI assistant designed to help you understand the process of buying an HDB flat in the resale market.
+    You can ask questions related to the buying process, eligibility criteria, and much more. Simply type your question and get an answer instantly.
+    """)
+
     user_question = st.text_input("Ask a question about the HDB resale process:")
-    if user_question:
-        response = chain.invoke(user_question)
-        st.write(response)
+    if st.button("Submit"):
+        if user_question:
+            response = chain.invoke(user_question)
+            st.write(response)
+        else:
+            st.write("Please enter a question to get started.")
 
 elif page == "HDB Resale Flat Search":
+    st.header("HDB Resale Flat Search")
+    st.write("""
+    This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
+    and the app will display matching resale flats based on data from data.gov.sg.
+    """)
+
     # Personalizing flat search with user inputs
-    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=1500000, step=50000)
+    budget = st.slider("Select your budget (SGD):", min_value=100000, max_value=2000000, step=50000)
     town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
     flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
     
@@ -155,13 +179,10 @@ elif page == "HDB Resale Flat Search":
                 if int(flat['resale_price']) <= budget and (town == "Any" or flat['town'] == town) and (flat_type == "Any" or flat['flat_type'] == flat_type):
                     filtered_flats.append(flat)
             
-            # Display data in a table
+            # Display data in a table with formatted currency
             if filtered_flats:
                 df = pd.DataFrame(filtered_flats, columns=["town", "flat_type", "resale_price", "storey_range", "floor_area_sqm"])
-                st.dataframe(df)
+                df["resale_price"] = df["resale_price"].apply(lambda x: f"${int(x):,}")
+                st.dataframe(df, width=1000)  # Set a larger table width
             else:
-                st.write("No flats found matching your criteria.")
-        except Exception as e:
-            st.error(f"Error fetching resale flats: {str(e)}")
-
-    get_resale_flats_by_budget(budget, town, flat_type)
+                st.write("No flats found matching your criteria
