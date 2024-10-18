@@ -186,3 +186,7 @@ elif page == "HDB Resale Flat Search":
                 st.dataframe(df, width=1000)  # Set a larger table width
             else:
                 st.write("No flats found matching your criteria.")  # Fixed the string error
+        except Exception as e:
+            st.error(f"Error fetching flats: {str(e)}")
+
+    get_resale_flats_by_budget(budget, town, flat_type)
