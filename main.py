@@ -5,7 +5,6 @@ import os
 import requests
 import pandas as pd
 from langchain.prompts import PromptTemplate
-from langchain.output_parsers import StrOutputParser
 from langchain_openai import OpenAI
 from langchain.agents import Tool
 from langchain.runnables import RunnablePassthrough
@@ -74,7 +73,6 @@ chain = (
     {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
     | prompt_template
     | llm
-    | StrOutputParser()
 )
 
 # Streamlit interface
