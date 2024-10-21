@@ -11,6 +11,10 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
 from datetime import datetime
+import altair as alt
+import folium
+from folium.plugins import HeatMap
+from streamlit_folium import folium_static
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -111,6 +115,56 @@ page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology",
 # Dynamic title based on the selected page
 st.title(f"{page} - HDB Resale Guide")
 
+# Function to generate historical resale price chart
+def plot_resale_price_trend(df, town=None, flat_type=None):
+    chart_data = df.copy()
+    
+    if town != "Any":
+        chart_data = chart_data[chart_data['town'] == town]
+    if flat_type != "Any":
+        chart_data = chart_data[chart_data['flat_type'] == flat_type]
+    
+    line_chart = alt.Chart(chart_data).mark_line().encode(
+        x='month:T',
+        y='resale_price:Q',
+        color='town:N',
+        tooltip=['town', 'flat_type', 'resale_price', 'month']
+    ).interactive()
+    
+    st.altair_chart(line_chart, use_container_width=True)
+
+# Heatmap of resale prices
+def create_heatmap(df):
+    # Example lat/lng coordinates for towns (you'll need actual coordinates)
+    town_coords = {
+        'Ang Mo Kio': [1.3691, 103.8497],
+        'Bedok': [1.3251, 103.9308],
+        # Add other town coordinates
+    }
+    
+    heatmap_data = []
+    for town, coord in town_coords.items():
+        avg_price = df[df['town'] == town]['resale_price'].mean()
+        if not pd.isna(avg_price):
+            heatmap_data.append(coord + [avg_price])
+    
+    m = folium.Map(location=[1.3521, 103.8198], zoom_start=11)
+    HeatMap(heatmap_data, max_value=df['resale_price'].max()).add_to(m)
+    
+    folium_static(m)
+
+# Comparison tool for resale flats
+def compare_flats(filtered_df):
+    selected_flats = st.multiselect("Select up to 3 flats for comparison", filtered_df['block'].unique(), max_selections=3)
+
+    if selected_flats:
+        comparison_df = filtered_df[filtered_df['block'].isin(selected_flats)]
+        comparison_cols = ['Town', 'Flat Type', 'Resale Price', 'Floor Area Sqm', 'Storey Range', 'Remaining Lease']
+        comparison_df['Resale Price'] = comparison_df['Resale Price'].apply(lambda x: f"${x:,.0f}")
+        
+        st.write("Comparing Selected Flats:")
+        st.dataframe(comparison_df[comparison_cols].reset_index(drop=True))
+
 # Handle content for each page
 if not check_password():
     st.write("Please enter the correct password above to access the content.")
@@ -158,75 +212,33 @@ else:
     elif page == "HDB Resale Chatbot":
         st.write("""
             Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process.
-            Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, just ask me anything.
-            I'm here to guide you every step of the way. Simply type your question below, and I'll provide you with the information you need.
+            Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, I'm here to assist you!
         """)
-
-        user_question = st.text_input("Ask a question about the HDB resale process:")
+        
+        user_question = st.text_input("Type your question:")
         if st.button("Submit"):
-            if user_question:
-                # Sanitize user input
-                sanitized_question = user_question.replace("{", "").replace("}", "").replace("\\", "")
-                
-                with st.spinner("Generating response..."):
-                    response = chain.invoke(sanitized_question)
+            with st.spinner("Rina is thinking..."):
+                response = chain.invoke(user_question)
                 st.write(response)
-            else:
-                st.write("Please enter a question to get started.")
+                
+            if "eligibility" in user_question.lower():
+                st.image("eligibility_flowchart.png")
 
     elif page == "HDB Resale Flat Search":
-        st.write("""
-            This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
-            and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
-        """)
-
-        @st.cache_data
-        def load_data():
-            url = "https://raw.githubusercontent.com/jassyjazz/bootcampai/main/resaleflatprices.csv"
-            df = pd.read_csv(url)
-            df['month'] = pd.to_datetime(df['month'])
-            return df
-
-        df = load_data()
-
-        budget = st.slider(
-            "Select your budget (SGD):",
-            min_value=200000,
-            max_value=1600000,
-            step=50000
-        )
-
-        formatted_budget = f"SGD ${budget:,.0f}"
-        st.write(f"Your selected budget: {formatted_budget}")
+        st.write("Search for resale flats based on your preferences and budget.")
         
-        town = st.selectbox("Select your preferred town:", ["Any"] + sorted(df['town'].unique().tolist()))
-        flat_type = st.selectbox("Select flat type:", ["Any"] + sorted(df['flat_type'].unique().tolist()))
-        
-        sort_options = {
-            "Newest to Oldest": ("month", False),
-            "Oldest to Newest": ("month", True),
-            "Price: Lowest to Highest": ("resale_price", True),
-            "Price: Highest to Lowest": ("resale_price", False)
-        }
-        sort_choice = st.selectbox("Sort by:", list(sort_options.keys()))
-        
-        if st.button("Search"):
-            filtered_df = df[df['resale_price'] <= budget]
-            
-            if town != "Any":
-                filtered_df = filtered_df[filtered_df['town'] == town]
-            if flat_type != "Any":
-                filtered_df = filtered_df[filtered_df['flat_type'] == flat_type]
-            
-            sort_column, ascending = sort_options[sort_choice]
-            filtered_df = filtered_df.sort_values(by=sort_column, ascending=ascending)
-            
-            if not filtered_df.empty:
-                st.write(f"Found {len(filtered_df)} matching flats:")
-                filtered_df['resale_price'] = filtered_df['resale_price'].apply(lambda x: f"${x:,.0f}")
-                filtered_df['month'] = filtered_df['month'].dt.strftime('%Y-%m')
-                columns_to_display = ['Town', 'Flat Type', 'Block', 'Street Name', 'Storey Range', 'Floor Area Sqm', 'Remaining Lease', 'Resale Price', 'Month']
-                filtered_df.columns = filtered_df.columns.str.title().str.replace('_', ' ')
-                st.dataframe(filtered_df[columns_to_display].reset_index(drop=True))
-            else:
-                st.write("No flats found within your budget and preferences.")
+        # Load your dataset here. For example:
+        df = pd.read_csv("resale_flat_prices.csv")
+        filtered_df = df  # Filter the dataframe based on user input
+
+        # Historical resale price trends chart
+        st.write("Historical Resale Price Trends")
+        if st.button("Show Price Trends"):
+            plot_resale_price_trend(df, town="Any", flat_type="Any")
+
+        # Comparison tool
+        compare_flats(filtered_df)
+
+        # Heatmap
+        if st.button("Show Heatmap of Resale Prices"):
+            create_heatmap(df)
