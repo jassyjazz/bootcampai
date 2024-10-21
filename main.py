@@ -206,41 +206,24 @@ else:
         budget = st.slider(
             "Select your budget (SGD):",
             min_value=200000,
-            max_value=1600000,
-            step=50000
+            max_value=1000000,
+            value=(300000, 600000),
+            step=10000,
+            format="SGD {value:,}",
         )
     
-        formatted_budget = f"SGD ${budget:,.0f}"
-        st.write(f"Your selected budget: {formatted_budget}")
-        
-        town = st.selectbox("Select your preferred town:", ["Any"] + sorted(df['town'].unique().tolist()))
-        flat_type = st.selectbox("Select flat type:", ["Any"] + sorted(df['flat_type'].unique().tolist()))
-        
-        sort_options = {
-            "Newest to Oldest": ("month", False),
-            "Oldest to Newest": ("month", True),
-            "Price: Lowest to Highest": ("resale_price", True),
-            "Price: Highest to Lowest": ("resale_price", False)
-        }
-        sort_choice = st.selectbox("Sort by:", list(sort_options.keys()))
-        
-        if st.button("Search"):
-            filtered_df = df[df['resale_price'] <= budget]
-            
-            if town != "Any":
-                filtered_df = filtered_df[filtered_df['town'] == town]
-            if flat_type != "Any":
-                filtered_df = filtered_df[filtered_df['flat_type'] == flat_type]
-            
-            sort_column, ascending = sort_options[sort_choice]
-            filtered_df = filtered_df.sort_values(by=sort_column, ascending=ascending)
-            
-            if not filtered_df.empty:
-                st.write(f"Found {len(filtered_df)} matching flats:")
-                filtered_df['resale_price'] = filtered_df['resale_price'].apply(lambda x: f"SGD ${x:,.0f}")
-                st.dataframe(filtered_df[['town', 'flat_type', 'resale_price', 'storey_range', 'floor_area_sqm']])
-                
-                # Plot the updated resale prices chart
-                st.plotly_chart(plot_resale_prices(filtered_df))
-            else:
-                st.write("No flats found matching your criteria.")
+        # Filter based on budget
+        filtered_df = df[df['resale_price'].between(budget[0], budget[1])]
+    
+        plot_resale_prices(filtered_df)
+        st.write(filtered_df[['town', 'flat_type', 'resale_price', 'storey_range', 'floor_area_sqm']].style.format({
+            'resale_price': '${:,.0f}'
+        }))
+    
+    elif page == "About Us":
+        st.write("""This project aims to make the process of buying an HDB resale flat more understandable and accessible. We aggregate official data and provide an 
+        interactive and informative platform for users interested in purchasing an HDB flat. Our data sources include **data.gov.sg**, **HDB**, and other open data platforms.""")
+
+    elif page == "Methodology":
+        st.write("""In this section, we explain how the data flows through the system and how we implement each use case. We present process flowcharts and details 
+        about the system's components, including the **data fetching**, **scraping**, **processing**, and **response generation** aspects of the project.""")
