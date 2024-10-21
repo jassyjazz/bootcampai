@@ -299,11 +299,18 @@ else:
         st.image("methodology_flowchart.png", caption="Detailed Flowchart of Application Processes")
 
     elif page == "HDB Resale Chatbot":
-        st.write("""
-            Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process.
-            Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, just ask me anything.
-            I'm here to guide you every step of the way. Simply type your question below, or click on one of the common queries to get started.
-        """)
+    elif page == "HDB Resale Chatbot":
+        col1, col2 = st.columns([1, 3])
+
+        with col1:
+            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/boticon.png", width=100)  # Adjust the width as needed
+
+        with col2:
+            st.write("""
+                Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process.
+                Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, just ask me anything.
+                I'm here to guide you every step of the way. Simply type your question below, or click on one of the common queries to get started.
+            """)
 
         # Common queries as buttons
         common_queries = [
