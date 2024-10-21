@@ -177,40 +177,51 @@ else:
                 st.write("Please enter a question to get started.")
 
     elif page == "HDB Resale Flat Search":
-        st.write("""
-            This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
-            and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
-        """)
+    st.write("""
+        This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
+        and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
+    """)
 
-        @st.cache_data
-        def load_data():
-            url = "https://raw.githubusercontent.com/jassyjazz/bootcampai/main/resaleflatprices.csv"
-            df = pd.read_csv(url)
-            df['month'] = pd.to_datetime(df['month'])
-            return df
+    @st.cache_data
+    def load_data():
+        url = "https://raw.githubusercontent.com/jassyjazz/bootcampai/main/resaleflatprices.csv"
+        df = pd.read_csv(url)
+        df['month'] = pd.to_datetime(df['month'])
+        return df
 
-        df = load_data()
+    df = load_data()
 
-        budget = st.slider(
-            "Select your budget (SGD):",
-            min_value=200000,
-            max_value=1600000,
-            step=50000
-        )
+    budget = st.slider(
+        "Select your budget (SGD):",
+        min_value=200000,
+        max_value=1600000,
+        step=50000
+    )
 
-        formatted_budget = f"SGD ${budget:,.0f}"
-        st.write(f"Your selected budget: {formatted_budget}")
+    formatted_budget = f"SGD ${budget:,.0f}"
+    st.write(f"Your selected budget: {formatted_budget}")
 
-        filtered_df = df[df['resale_price'] <= budget]
-        st.write("**Available Flats** (filtered by budget):")
+    filtered_df = df[df['resale_price'] <= budget]
+    st.write("**Available Flats** (filtered by budget):")
 
-        # Replace 'id' column with more intuitive info (Town + Flat Type)
-        filtered_df['flat_info'] = filtered_df['town'] + " - " + filtered_df['flat_type']
-        filtered_df.drop(columns=['id'], inplace=True)  # Drop id column
+    # Replace 'id' column with more intuitive info (Town + Flat Type)
+    filtered_df['flat_info'] = filtered_df['town'] + " - " + filtered_df['flat_type']
+    filtered_df.drop(columns=['id'], inplace=True)  # Drop id column
 
-        st.dataframe(filtered_df[['flat_info', 'resale_price', 'storey_range', 'floor_area_sqm']])
+    # Display the filtered data
+    if not filtered_df.empty:
+        st.write(f"Found {len(filtered_df)} matching flats:")
+
+        # Format resale price and month
+        filtered_df['resale_price'] = filtered_df['resale_price'].apply(lambda x: f"${x:,.0f}")
+        filtered_df['month'] = filtered_df['month'].dt.strftime('%Y-%m')
+
+        # Display selected columns
+        filtered_df.columns = filtered_df.columns.str.title().str.replace('_', ' ')
+        st.dataframe(filtered_df[['flat_info', 'resale_price', 'storey_range', 'floor_area_sqm', 'remaining_lease', 'month']].reset_index(drop=True))
 
         # Display a more user-friendly chart (Bar chart)
-        if not filtered_df.empty:
-            fig = px.bar(filtered_df, x='flat_info', y='resale_price', title="Resale Price of Available Flats")
-            st.plotly_chart(fig)
+        fig = px.bar(filtered_df, x='flat_info', y='resale_price', title="Resale Price of Available Flats")
+        st.plotly_chart(fig)
+    else:
+        st.write("No flats found within your budget and preferences.")
