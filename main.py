@@ -88,10 +88,12 @@ chain = (
 
 # Password Protection
 password = st.text_input("Enter password to access the main page:", type="password")
-
-if password != "bootcamp123":
-    st.error("Please enter the correct password to access the content.")
-    st.stop()
+if st.button("Enter"):
+    if password != "bootcamp123":
+        st.error("Please enter the correct password to access the content.")
+        st.stop()
+else:
+    st.stop()  # Stop execution if the Enter button hasn't been clicked
 
 # After password validation, show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
@@ -193,7 +195,7 @@ elif page == "HDB Resale Flat Search":
     
     def get_resale_flats_by_budget(budget, town, flat_type, sort_by="month", sort_order="descending"):
         datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-        url = "https://data.gov.sg/api/action/datastore_search?resource_id="  + datasetId
+        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=1000"
         
         try:
             response = requests.get(url)
@@ -213,13 +215,13 @@ elif page == "HDB Resale Flat Search":
                             "storey_range": flat["storey_range"],
                             "floor_area_sqm": flat["floor_area_sqm"],
                             "remaining_lease": flat["remaining_lease"],
-                            "resale_price": f"${float(flat['resale_price']):,.0f}",
+                            "resale_price": float(flat['resale_price']),
                             "month": flat["month"]
                         })
             
             # Sort the filtered flats
             if sort_by == "resale_price":
-                filtered_flats.sort(key=lambda x: float(x["resale_price"].replace("$", "").replace(",", "")), reverse=(sort_order == "descending"))
+                filtered_flats.sort(key=lambda x: x["resale_price"], reverse=(sort_order == "descending"))
             else:
                 filtered_flats.sort(key=lambda x: x["month"], reverse=(sort_order == "descending"))
             
@@ -234,6 +236,7 @@ elif page == "HDB Resale Flat Search":
         if filtered_flats:
             st.write(f"Found {len(filtered_flats)} matching flats:")
             flats_df = pd.DataFrame(filtered_flats)
+            flats_df['resale_price'] = flats_df['resale_price'].apply(lambda x: f"${x:,.0f}")
             st.dataframe(flats_df)
         else:
             st.write("No flats found within your budget and preferences.")
