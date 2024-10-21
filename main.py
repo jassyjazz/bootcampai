@@ -177,7 +177,7 @@ else:
                 st.write("Please enter a question to get started.")
 
     elif page == "HDB Resale Flat Search":
-    st.write("""
+        st.write("""
         This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
         and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
     """)
