@@ -7,3 +7,6 @@ pandas
 plotly
 requests
 beautifulsoup4
+folium
+streamlit-folium
+langchain-core
