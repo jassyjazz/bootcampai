@@ -96,13 +96,13 @@ def check_password():
     if st.session_state.authenticated:
         return True
     
-    password = st.sidebar.text_input("Enter password to access the pages:", type="password")
-    if st.sidebar.button("Enter"):
+    password = st.text_input("Enter password to access the pages:", type="password")
+    if st.button("Enter"):
         if password == "bootcamp123":
             st.session_state.authenticated = True
             return True
         else:
-            st.sidebar.error("Please enter the correct password to access the content.")
+            st.error("Please enter the correct password to access the content.")
     return False
 
 # Show the page selection sidebar
@@ -113,7 +113,7 @@ st.title(f"{page} - HDB Resale Guide")
 
 # Handle content for each page
 if not check_password():
-    st.write("Please enter the correct password in the sidebar to access the content.")
+    st.write("Please enter the correct password above to access the content.")
 else:
     if page == "Home":
         st.write("""
