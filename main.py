@@ -14,6 +14,7 @@ from datetime import datetime
 import altair as alt
 import folium
 from folium.plugins import HeatMap
+import requests
 from streamlit_folium import folium_static
 
 # Initialize session state
@@ -133,25 +134,38 @@ def plot_resale_price_trend(df, town=None, flat_type=None):
     
     st.altair_chart(line_chart, use_container_width=True)
 
-# Heatmap of resale prices
+# Cache town coordinates
+@st.cache_data(ttl=86400)
+def get_coordinates(town):
+    try:
+        url = f"https://nominatim.openstreetmap.org/search?q={town}+Singapore&format=json"
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data:
+            return float(data[0]['lat']), float(data[0]['lon'])
+        else:
+            st.warning(f"Coordinates not found for {town}.")
+            return None, None
+    except Exception as e:
+        st.error(f"Error retrieving coordinates: {str(e)}")
+        return None, None
+
+# Heatmap of resale prices using online geocoding
 def create_heatmap(df):
-    # Example lat/lng coordinates for towns (you'll need actual coordinates)
-    town_coords = {
-        'Ang Mo Kio': [1.3691, 103.8497],
-        'Bedok': [1.3251, 103.9308],
-        # Add other town coordinates
-    }
-    
     heatmap_data = []
-    for town, coord in town_coords.items():
-        avg_price = df[df['town'] == town]['resale_price'].mean()
-        if not pd.isna(avg_price):
-            heatmap_data.append(coord + [avg_price])
+    for town in df['town'].unique():
+        lat, lon = get_coordinates(town)
+        if lat and lon:
+            avg_price = df[df['town'] == town]['resale_price'].mean()
+            heatmap_data.append([lat, lon, avg_price])
     
-    m = folium.Map(location=[1.3521, 103.8198], zoom_start=11)
-    HeatMap(heatmap_data, max_value=df['resale_price'].max()).add_to(m)
-    
-    folium_static(m)
+    if heatmap_data:
+        m = folium.Map(location=[1.3521, 103.8198], zoom_start=11)
+        HeatMap(heatmap_data, max_value=df['resale_price'].max()).add_to(m)
+        folium_static(m)
+    else:
+        st.warning("No heatmap data available.")
 
 # Comparison tool for resale flats
 def compare_flats(filtered_df):
