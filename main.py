@@ -199,22 +199,104 @@ else:
 
     elif page == "About Us":
         st.write("""
-            This project aims to guide users through the process of buying an HDB flat in the resale market.
-            Key features include an AI-powered chatbot to answer questions and a resale flat search based on budget.
-            Data sources include official HDB websites and data.gov.sg.
+        # About Us
+
+        ## Project Scope
+        Our HDB Resale Guide is a comprehensive tool designed to simplify the process of buying a resale HDB flat in Singapore. We aim to provide accurate, up-to-date information and interactive tools to assist potential buyers in making informed decisions.
+
+        ## Objectives
+        1. To demystify the HDB resale process for potential buyers.
+        2. To provide an AI-powered assistant capable of answering specific questions about HDB resale procedures.
+        3. To offer a user-friendly interface for searching available HDB resale flats based on budget and preferences.
+        4. To present data-driven insights into the HDB resale market trends.
+
+        ## Data Sources
+        Our application relies on the following data sources to ensure accuracy and relevance:
+        - Official HDB website (www.hdb.gov.sg)
+        - Data.gov.sg for HDB resale transaction data
+        - HDB press releases and official announcements
+
+        ## Features
+        1. **HDB Resale Chatbot (Rina)**:
+          - AI-powered assistant to answer user queries
+          - Utilizes natural language processing to understand and respond to questions
+          - Provides information based on the latest HDB guidelines and procedures
+
+        2. **HDB Resale Flat Search**:
+          - Interactive tool to search for resale flats within a specified budget
+          - Filters for town, flat type, and other preferences
+          - Displays relevant property details and transaction history
+
+        3. **Data Visualizations**:
+          - Price distribution charts
+          - Average price by town comparisons
+          - Price vs. floor area scatter plots
+
+        4. **Methodology Transparency**:
+          - Detailed explanation of our data processing and analysis methods
+          - Flowcharts illustrating the application's processes
+
+        We are committed to providing a valuable resource for anyone navigating the HDB resale market, combining the latest technology with comprehensive, reliable information.
         """)
 
     elif page == "Methodology":
         st.write("""
-            This section describes the data flow and implementation of the app:
-            1. **HDB Resale Chatbot**:
-                - User inputs a question → Query is passed to Langchain model → Retrieve relevant documents from the HDB website or fallback JSON → Generate response → Display to user.
-            2. **HDB Resale Flat Search**:
-                - User selects budget → Data fetched from CSV file → Filter flats within budget → Display relevant flats.
+        # Methodology
+
+        This section describes the data flow and implementation details of our HDB Resale Guide application. We use a combination of web scraping, data processing, and machine learning techniques to provide accurate and up-to-date information.
+
+        ## 1. HDB Resale Chatbot
+
+        Our AI assistant, Rina, uses a retrieval-augmented generation (RAG) approach to answer user queries:
+
+        1. User inputs a question about the HDB resale process.
+        2. The query is passed to our Langchain model.
+        3. Relevant documents are retrieved from:
+          - Scraped HDB website content
+          - Fallback JSON document (if web scraping yields no results)
+        4. The retrieved context and user query are used to generate a response.
+        5. The response is displayed to the user in the chat interface.
+
+        ### Data Flow:
+        User Input → Query Processing → Document Retrieval → Context + Query to LLM → Response Generation → Display to User
+
+        ## 2. HDB Resale Flat Search
+
+        Our flat search feature processes data as follows:
+
+        1. User selects budget and preferences (town, flat type).
+        2. Data is fetched from a CSV file containing recent HDB resale transactions.
+        3. The application filters flats within the specified budget and preferences.
+        4. Matching flats are displayed in a table format.
+        5. Additional visualizations (price distribution, average price by town, etc.) are generated using Plotly.
+
+        ### Data Flow:
+        User Input (Budget/Preferences) → Data Filtering → Sorting → Result Display → Data Visualization
+
+        ## Implementation Details
+
+        - Web Scraping: We use BeautifulSoup to scrape the official HDB website daily.
+        - Data Processing: Pandas is used for data cleaning and manipulation.
+        - Language Model: We utilize the GPT-4o-mini model via the Langchain library.
+        - Visualization: Plotly Express is used for creating interactive charts and graphs.
+        - Data Storage: Scraped data is stored in CSV format for easy access and processing.
+
+        ## Security Measures
+
+        - User inputs are sanitized to prevent injection attacks.
+        - The application is password-protected to control access.
+        - We do not store personal user data or chat histories beyond the current session.
+
+        ## Limitations and Future Improvements
+
+        - The chatbot's knowledge is limited to its training data and may not cover very recent changes.
+        - The flat search feature relies on historical data and may not reflect real-time availability.
+        - Future versions aim to incorporate real-time data feeds and more advanced predictive analytics.
         """)
-        # Flowchart for Use Cases (Illustrative Example)
-        st.write("Flowchart for Use Cases:")
-        st.image("methodology_flowchart.png")  # You can generate this from a tool like Graphviz.
+
+        # Flowchart for Use Cases
+        st.write("## Flowchart for Use Cases:")
+        st.image("methodology_flowchart.png", caption="Detailed Flowchart of Application Processes")
 
     elif page == "HDB Resale Chatbot":
         st.write("""
