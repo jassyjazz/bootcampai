@@ -11,6 +11,7 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
 from datetime import datetime
+import plotly.express as px
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -85,7 +86,7 @@ prompt_template = PromptTemplate(
 )
 
 chain = (
-    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
+    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough() }
     | prompt_template
     | llm
     | StrOutputParser()
@@ -116,70 +117,27 @@ if not check_password():
     st.write("Please enter the correct password above to access the content.")
 else:
     if page == "Home":
-        st.write("""
-            This application is designed to help you navigate the process of buying an HDB flat in the resale market.
-            You can learn about the buying procedure, interact with a virtual assistant, and search for available flats based on your budget.
-            
-            To get started, you can explore the following pages:
-            - **About Us**: Learn more about our project, objectives, and data sources.
-            - **Methodology**: Understand the data flows and see the process flowcharts for each use case.
-            - **HDB Resale Chatbot**: Chat with our virtual assistant about the HDB resale process.
-            - **HDB Resale Flat Search**: Search for available resale flats based on your budget and preferences.
-        """)
+        st.write("""This application is designed to help you navigate the process of buying an HDB flat in the resale market. You can learn about the buying procedure, interact with a virtual assistant, and search for available flats based on your budget. 
+        To get started, you can explore the following pages:
+        - **About Us**: Learn more about our project, objectives, and data sources.
+        - **Methodology**: Understand the data flows and see the process flowcharts for each use case.
+        - **HDB Resale Chatbot**: Chat with our virtual assistant about the HDB resale process.
+        - **HDB Resale Flat Search**: Search for available resale flats based on your budget and preferences.""")
         
-        with st.expander("Disclaimer"):
-            st.write("""
-            IMPORTANT NOTICE: This web application is a prototype developed for educational purposes only. The information provided here is NOT intended for real-world usage and should not be relied upon for making any decisions, especially those related to financial, legal, or healthcare matters.
-
-            Furthermore, please be aware that the LLM may generate inaccurate or incorrect information. You assume full responsibility for how you use any generated output.
-
-            Always consult with qualified professionals for accurate and personalized advice.
-            """)
-
-    elif page == "About Us":
-        st.write("""
-            This project aims to guide users through the process of buying an HDB flat in the resale market.
-            Key features include an AI-powered chatbot to answer questions and a resale flat search based on budget.
-            Data sources include official HDB websites and data.gov.sg.
-        """)
-
-    elif page == "Methodology":
-        st.write("""
-            This section describes the data flow and implementation of the app:
-            1. **HDB Resale Chatbot**: 
-                - User inputs a question → Query is passed to Langchain model → Retrieve relevant documents from the HDB website or fallback JSON → Generate response → Display to user.
-            2. **HDB Resale Flat Search**: 
-                - User selects budget → Data fetched from CSV file → Filter flats within budget → Display relevant flats.
-        """)
-        # Flowchart for Use Cases (Illustrative Example)
-        st.write("Flowchart for Use Cases:")
-        st.image("methodology_flowchart.png")  # You can generate this from a tool like Graphviz.
-
     elif page == "HDB Resale Chatbot":
-        st.write("""
-            Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process.
-            Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, just ask me anything.
-            I'm here to guide you every step of the way. Simply type your question below, and I'll provide you with the information you need.
-        """)
-
+        st.write("""Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process. Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, just ask me anything. I'm here to guide you every step of the way. Simply type your question below, and I'll provide you with the information you need.""")
+        
         user_question = st.text_input("Ask a question about the HDB resale process:")
         if st.button("Submit"):
             if user_question:
-                # Sanitize user input
                 sanitized_question = user_question.replace("{", "").replace("}", "").replace("\\", "")
-                
                 with st.spinner("Generating response..."):
                     response = chain.invoke(sanitized_question)
                 st.write(response)
-            else:
-                st.write("Please enter a question to get started.")
 
     elif page == "HDB Resale Flat Search":
-        st.write("""
-            This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
-            and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
-        """)
-
+        st.write("""This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.""")
+        
         @st.cache_data
         def load_data():
             url = "https://raw.githubusercontent.com/jassyjazz/bootcampai/main/resaleflatprices.csv"
@@ -189,13 +147,7 @@ else:
 
         df = load_data()
 
-        budget = st.slider(
-            "Select your budget (SGD):",
-            min_value=200000,
-            max_value=1600000,
-            step=50000
-        )
-
+        budget = st.slider("Select your budget (SGD):", min_value=200000, max_value=1600000, step=50000)
         formatted_budget = f"SGD ${budget:,.0f}"
         st.write(f"Your selected budget: {formatted_budget}")
         
@@ -212,7 +164,6 @@ else:
         
         if st.button("Search"):
             filtered_df = df[df['resale_price'] <= budget]
-            
             if town != "Any":
                 filtered_df = filtered_df[filtered_df['town'] == town]
             if flat_type != "Any":
@@ -228,5 +179,9 @@ else:
                 columns_to_display = ['Town', 'Flat Type', 'Block', 'Street Name', 'Storey Range', 'Floor Area Sqm', 'Remaining Lease', 'Resale Price', 'Month']
                 filtered_df.columns = filtered_df.columns.str.title().str.replace('_', ' ')
                 st.dataframe(filtered_df[columns_to_display].reset_index(drop=True))
+
+                # Plotting the resale prices
+                fig = px.bar(filtered_df, x='Month', y='Resale Price', color='Town', title="Resale Price Distribution Over Time")
+                st.plotly_chart(fig)
             else:
                 st.write("No flats found within your budget and preferences.")
