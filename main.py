@@ -193,7 +193,7 @@ elif page == "HDB Resale Flat Search":
     
     def get_resale_flats_by_budget(budget, town, flat_type, sort_by="month", sort_order="descending"):
         datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=1000"
+        url = f"https://data.gov.sg/api/action/datastore_search?resource_id="
         
         try:
             response = requests.get(url)
