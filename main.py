@@ -149,7 +149,7 @@ elif page == "Methodology":
         1. **HDB Resale Chatbot**: 
             - User inputs a question → Query is passed to Langchain model → Retrieve relevant documents from the HDB website or fallback JSON → Generate response → Display to user.
         2. **HDB Resale Flat Search**: 
-            - User selects budget → Data fetched from data.gov.sg → Filter flats within budget → Display relevant flats.
+            - User selects budget → Data fetched from CSV file → Filter flats within budget → Display relevant flats.
     """)
     # Flowchart for Use Cases (Illustrative Example)
     st.write("Flowchart for Use Cases:")
@@ -177,77 +177,55 @@ elif page == "HDB Resale Chatbot":
 elif page == "HDB Resale Flat Search":
     st.write("""
         This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
-        and the app will display matching resale flats based on data from data.gov.sg.
+        and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
     """)
+
+    @st.cache_data
+    def load_data():
+        url = "https://raw.githubusercontent.com/jassyjazz/bootcampai/main/resaleflatprices.csv"
+        df = pd.read_csv(url)
+        df['month'] = pd.to_datetime(df['month'])
+        return df
+
+    df = load_data()
 
     budget = st.slider(
         "Select your budget (SGD):",
-        min_value=100000,
-        max_value=2000000,
+        min_value=int(df['resale_price'].min()),
+        max_value=int(df['resale_price'].max()),
         step=50000
     )
 
     formatted_budget = f"SGD ${budget:,.0f}"
     st.write(f"Your selected budget: {formatted_budget}")
     
-    town = st.selectbox("Select your preferred town:", ["Any", "ANG MO KIO", "BEDOK", "BUKIT MERAH", "BUKIT PANJANG", "CHOA CHU KANG", "HOUGANG", "JURONG EAST"])
-    flat_type = st.selectbox("Select flat type:", ["Any", "2 ROOM", "3 ROOM", "4 ROOM", "5 ROOM", "EXECUTIVE"])
+    town = st.selectbox("Select your preferred town:", ["Any"] + sorted(df['town'].unique().tolist()))
+    flat_type = st.selectbox("Select flat type:", ["Any"] + sorted(df['flat_type'].unique().tolist()))
     
     sort_options = {
-        "Newest to Oldest": ("month", "descending"),
-        "Oldest to Newest": ("month", "ascending"),
-        "Price: Lowest to Highest": ("resale_price", "ascending"),
-        "Price: Highest to Lowest": ("resale_price", "descending")
+        "Newest to Oldest": ("month", False),
+        "Oldest to Newest": ("month", True),
+        "Price: Lowest to Highest": ("resale_price", True),
+        "Price: Highest to Lowest": ("resale_price", False)
     }
     sort_choice = st.selectbox("Sort by:", list(sort_options.keys()))
     
-    def get_resale_flats_by_budget(budget, town, flat_type, sort_by="month", sort_order="descending"):
-        datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=5000"
-        
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()['result']['records']
-            
-            filtered_flats = []
-            for flat in data:
-                price = float(flat["resale_price"])
-                flat_date = datetime.strptime(flat["month"], "%Y-%m")
-                if (price <= budget and
-                    datetime(2024, 1, 1) <= flat_date <= datetime(2024, 10, 31) and
-                    (town == "Any" or flat["town"] == town) and
-                    (flat_type == "Any" or flat["flat_type"] == flat_type)):
-                    filtered_flats.append({
-                        "town": flat["town"],
-                        "flat_type": flat["flat_type"],
-                        "block": flat["block"],
-                        "street_name": flat["street_name"],
-                        "storey_range": flat["storey_range"],
-                        "floor_area_sqm": flat["floor_area_sqm"],
-                        "remaining_lease": flat["remaining_lease"],
-                        "resale_price": float(flat['resale_price']),
-                        "month": flat["month"]
-                    })
-            
-            # Sort the filtered flats
-            if sort_by == "resale_price":
-                filtered_flats.sort(key=lambda x: x["resale_price"], reverse=(sort_order == "descending"))
-            else:
-                filtered_flats.sort(key=lambda x: datetime.strptime(x["month"], "%Y-%m"), reverse=(sort_order == "descending"))
-            
-            return filtered_flats
-        except Exception as e:
-            st.error(f"Error fetching resale flat data: {str(e)}")
-            return []
-
     if st.button("Search"):
-        sort_by, sort_order = sort_options[sort_choice]
-        filtered_flats = get_resale_flats_by_budget(budget, town, flat_type, sort_by, sort_order)
-        if filtered_flats:
-            st.write(f"Found {len(filtered_flats)} matching flats:")
-            flats_df = pd.DataFrame(filtered_flats)
-            flats_df['resale_price'] = flats_df['resale_price'].apply(lambda x: f"${x:,.0f}")
-            st.dataframe(flats_df)
+        filtered_df = df[df['resale_price'] <= budget]
+        
+        if town != "Any":
+            filtered_df = filtered_df[filtered_df['town'] == town]
+        if flat_type != "Any":
+            filtered_df = filtered_df[filtered_df['flat_type'] == flat_type]
+        
+        sort_column, ascending = sort_options[sort_choice]
+        filtered_df = filtered_df.sort_values(by=sort_column, ascending=ascending)
+        
+        if not filtered_df.empty:
+            st.write(f"Found {len(filtered_df)} matching flats:")
+            filtered_df['resale_price'] = filtered_df['resale_price'].apply(lambda x: f"${x:,.0f}")
+            st.dataframe(filtered_df)
         else:
             st.write("No flats found within your budget and preferences.")
+
+# The rest of your code (if any) goes here
