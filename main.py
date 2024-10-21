@@ -10,6 +10,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
+from datetime import datetime
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -189,7 +190,7 @@ elif page == "HDB Resale Flat Search":
     formatted_budget = f"SGD ${budget:,.0f}"
     st.write(f"Your selected budget: {formatted_budget}")
     
-    town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
+    town = st.selectbox("Select your preferred town:", ["Any", "ANG MO KIO", "BEDOK", "BUKIT MERAH", "BUKIT PANJANG", "CHOA CHU KANG", "HOUGANG", "JURONG EAST"])
     flat_type = st.selectbox("Select flat type:", ["Any", "2 ROOM", "3 ROOM", "4 ROOM", "5 ROOM", "EXECUTIVE"])
     
     sort_options = {
@@ -230,7 +231,7 @@ elif page == "HDB Resale Flat Search":
             if sort_by == "resale_price":
                 filtered_flats.sort(key=lambda x: x["resale_price"], reverse=(sort_order == "descending"))
             else:
-                filtered_flats.sort(key=lambda x: x["month"], reverse=(sort_order == "descending"))
+                filtered_flats.sort(key=lambda x: datetime.strptime(x["month"], "%Y-%m"), reverse=(sort_order == "descending"))
             
             return filtered_flats
         except Exception as e:
