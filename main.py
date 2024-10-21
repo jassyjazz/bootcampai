@@ -299,7 +299,6 @@ else:
         st.image("methodology_flowchart.png", caption="Detailed Flowchart of Application Processes")
 
     elif page == "HDB Resale Chatbot":
-    elif page == "HDB Resale Chatbot":
         col1, col2 = st.columns([1, 3])
 
         with col1:
