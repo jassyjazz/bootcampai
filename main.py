@@ -213,7 +213,7 @@ else:
         common_queries = [
             "What are the eligibility criteria for buying an HDB resale flat?",
             "How do I apply for an HDB resale flat?",
-            "What is the HDB resale process?",
+            "What are the steps involved in the resale process?",  # Updated query
             "What grants are available for HDB resale flats?",
             "How long does the HDB resale process take?"
         ]
@@ -246,9 +246,9 @@ else:
             else:
                 st.write("Please enter a question to get started.")
 
-        # Display chat history with improved formatting
+        # Display chat history with improved formatting (latest conversation at the top)
         st.write("Chat History:")
-        for i, (role, message) in enumerate(st.session_state.chat_history):
+        for i, (role, message) in enumerate(reversed(st.session_state.chat_history)):
             if i % 2 == 0:
                 st.write("---")  # Add a separator between conversations
             if role == "Human":
