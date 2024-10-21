@@ -203,7 +203,7 @@ elif page == "HDB Resale Flat Search":
     
     def get_resale_flats_by_budget(budget, town, flat_type, sort_by="month", sort_order="descending"):
         datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=1000"
+        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=5000"
         
         try:
             response = requests.get(url)
@@ -213,19 +213,22 @@ elif page == "HDB Resale Flat Search":
             filtered_flats = []
             for flat in data:
                 price = float(flat["resale_price"])
-                if price <= budget:
-                    if (town == "Any" or flat["town"] == town) and (flat_type == "Any" or flat["flat_type"] == flat_type):
-                        filtered_flats.append({
-                            "town": flat["town"],
-                            "flat_type": flat["flat_type"],
-                            "block": flat["block"],
-                            "street_name": flat["street_name"],
-                            "storey_range": flat["storey_range"],
-                            "floor_area_sqm": flat["floor_area_sqm"],
-                            "remaining_lease": flat["remaining_lease"],
-                            "resale_price": float(flat['resale_price']),
-                            "month": flat["month"]
-                        })
+                flat_date = datetime.strptime(flat["month"], "%Y-%m")
+                if (price <= budget and
+                    datetime(2024, 1, 1) <= flat_date <= datetime(2024, 10, 31) and
+                    (town == "Any" or flat["town"] == town) and
+                    (flat_type == "Any" or flat["flat_type"] == flat_type)):
+                    filtered_flats.append({
+                        "town": flat["town"],
+                        "flat_type": flat["flat_type"],
+                        "block": flat["block"],
+                        "street_name": flat["street_name"],
+                        "storey_range": flat["storey_range"],
+                        "floor_area_sqm": flat["floor_area_sqm"],
+                        "remaining_lease": flat["remaining_lease"],
+                        "resale_price": float(flat['resale_price']),
+                        "month": flat["month"]
+                    })
             
             # Sort the filtered flats
             if sort_by == "resale_price":
