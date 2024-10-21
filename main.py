@@ -11,6 +11,10 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
 
+# Initialize session state
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
 def scrape_hdb_resale_info():
@@ -87,28 +91,27 @@ chain = (
 )
 
 # Password Protection
-password = st.text_input("Enter password to access the main page:", type="password")
-if st.button("Enter"):
-    if password != "bootcamp123":
-        st.error("Please enter the correct password to access the content.")
-        st.stop()
-else:
-    st.stop()  # Stop execution if the Enter button hasn't been clicked
+def check_password():
+    if st.session_state.authenticated:
+        return True
+    
+    password = st.text_input("Enter password to access the main page:", type="password")
+    if st.button("Enter"):
+        if password == "bootcamp123":
+            st.session_state.authenticated = True
+            return True
+        else:
+            st.error("Please enter the correct password to access the content.")
+    return False
+
+if not check_password():
+    st.stop()
 
 # After password validation, show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
 
 # Dynamic title based on the selected page
-if page == "Home":
-    st.title("HDB Resale Guide")
-elif page == "About Us":
-    st.title("About Us - HDB Resale Guide")
-elif page == "Methodology":
-    st.title("Methodology - HDB Resale Guide")
-elif page == "HDB Resale Chatbot":
-    st.title("HDB Resale Chatbot")
-elif page == "HDB Resale Flat Search":
-    st.title("HDB Resale Flat Search")
+st.title(f"{page} - HDB Resale Guide")
 
 # Handle content for each page
 if page == "Home":
@@ -138,6 +141,7 @@ elif page == "About Us":
         Key features include an AI-powered chatbot to answer questions and a resale flat search based on budget.
         Data sources include official HDB websites and data.gov.sg.
     """)
+
 elif page == "Methodology":
     st.write("""
         This section describes the data flow and implementation of the app:
@@ -149,6 +153,7 @@ elif page == "Methodology":
     # Flowchart for Use Cases (Illustrative Example)
     st.write("Flowchart for Use Cases:")
     st.image("methodology_flowchart.png")  # You can generate this from a tool like Graphviz.
+
 elif page == "HDB Resale Chatbot":
     st.write("""
         Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process.
@@ -162,10 +167,12 @@ elif page == "HDB Resale Chatbot":
             # Sanitize user input
             sanitized_question = user_question.replace("{", "").replace("}", "").replace("\\", "")
             
-            response = chain.invoke(sanitized_question)
+            with st.spinner("Generating response..."):
+                response = chain.invoke(sanitized_question)
             st.write(response)
         else:
             st.write("Please enter a question to get started.")
+
 elif page == "HDB Resale Flat Search":
     st.write("""
         This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
