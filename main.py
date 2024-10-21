@@ -257,83 +257,96 @@ else:
                 st.write(f"**Rina:** {message}")
 
     elif page == "HDB Resale Flat Search":
-      st.write("""
-          This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type,
-          and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
-      """)
+        st.write("""
+            This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type,
+            and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
+        """)
 
-      @st.cache_data
-      def load_data():
-          url = "https://raw.githubusercontent.com/jassyjazz/bootcampai/main/resaleflatprices.csv"
-          df = pd.read_csv(url)
-          df['month'] = pd.to_datetime(df['month'])
-          df['resale_price'] = pd.to_numeric(df['resale_price'], errors='coerce')
-          return df
+        @st.cache_data
+        def load_data():
+            url = "https://raw.githubusercontent.com/jassyjazz/bootcampai/main/resaleflatprices.csv"
+            df = pd.read_csv(url)
+            df['month'] = pd.to_datetime(df['month'])
+            df['resale_price'] = pd.to_numeric(df['resale_price'], errors='coerce')
+            return df
 
-      df = load_data()
+        df = load_data()
 
-      budget = st.slider(
-          "Select your budget (SGD):",
-          min_value=200000,
-          max_value=1600000,
-          step=50000
-      )
+        budget = st.slider(
+            "Select your budget (SGD):",
+            min_value=200000,
+            max_value=1600000,
+            step=50000
+        )
 
-      formatted_budget = f"SGD ${budget:,.0f}"
-      st.write(f"Your selected budget: {formatted_budget}")
+        formatted_budget = f"SGD ${budget:,.0f}"
+        st.write(f"Your selected budget: {formatted_budget}")
 
-      town = st.selectbox("Select your preferred town:", ["Any"] + sorted(df['town'].unique().tolist()))
-      flat_type = st.selectbox("Select flat type:", ["Any"] + sorted(df['flat_type'].unique().tolist()))
+        town = st.selectbox("Select your preferred town:", ["Any"] + sorted(df['town'].unique().tolist()))
+        flat_type = st.selectbox("Select flat type:", ["Any"] + sorted(df['flat_type'].unique().tolist()))
 
-      sort_options = {
-          "Newest to Oldest": ("month", False),
-          "Oldest to Newest": ("month", True),
-          "Price: Lowest to Highest": ("resale_price", True),
-          "Price: Highest to Lowest": ("resale_price", False)
-      }
-      sort_choice = st.selectbox("Sort by:", list(sort_options.keys()))
+        sort_options = {
+            "Newest to Oldest": ("month", False),
+            "Oldest to Newest": ("month", True),
+            "Price: Lowest to Highest": ("resale_price", True),
+            "Price: Highest to Lowest": ("resale_price", False)
+        }
+        sort_choice = st.selectbox("Sort by:", list(sort_options.keys()))
 
-      if st.button("Search"):
-          filtered_df = df[df['resale_price'] <= budget]
+        if st.button("Search"):
+            filtered_df = df[df['resale_price'] <= budget]
 
-          if town != "Any":
-              filtered_df = filtered_df[filtered_df['town'] == town]
-          if flat_type != "Any":
-              filtered_df = filtered_df[filtered_df['flat_type'] == flat_type]
+            if town != "Any":
+                filtered_df = filtered_df[filtered_df['town'] == town]
+            if flat_type != "Any":
+                filtered_df = filtered_df[filtered_df['flat_type'] == flat_type]
 
-          sort_column, ascending = sort_options[sort_choice]
-          filtered_df = filtered_df.sort_values(by=sort_column, ascending=ascending)
+            sort_column, ascending = sort_options[sort_choice]
+            filtered_df = filtered_df.sort_values(by=sort_column, ascending=ascending)
 
-          if not filtered_df.empty:
-              st.write(f"Found {len(filtered_df)} matching flats:")
+            if not filtered_df.empty:
+                st.write(f"Found {len(filtered_df)} matching flats:")
 
-              # Create a copy of the dataframe for display purposes
-              display_df = filtered_df.copy()
-              display_df['formatted_price'] = display_df['resale_price'].apply(lambda x: f"${x:,.0f}")
-              display_df['month'] = display_df['month'].dt.strftime('%Y-%m')
-              columns_to_display = ['Town', 'Flat Type', 'Block', 'Street Name', 'Storey Range', 'Floor Area Sqm', 'Remaining Lease', 'formatted_price', 'Month']
-              display_df.columns = display_df.columns.str.title().str.replace('_', ' ')
-              st.dataframe(display_df[columns_to_display].rename(columns={'Formatted Price': 'Resale Price'}).reset_index(drop=True))
+                # Create a copy of the dataframe for display purposes
+                display_df = filtered_df.copy()
+                display_df['formatted_price'] = display_df['resale_price'].apply(lambda x: f"${x:,.0f}")
+                display_df['month'] = display_df['month'].dt.strftime('%Y-%m')
 
-              # Visualizations
-              st.subheader("Visualizations")
+                # Rename columns before selecting them
+                display_df = display_df.rename(columns={
+                    'town': 'Town',
+                    'flat_type': 'Flat Type',
+                    'block': 'Block',
+                    'street_name': 'Street Name',
+                    'storey_range': 'Storey Range',
+                    'floor_area_sqm': 'Floor Area Sqm',
+                    'remaining_lease': 'Remaining Lease',
+                    'formatted_price': 'Resale Price',
+                    'month': 'Month'
+                })
 
-              # Price Distribution
-              fig_price = px.histogram(filtered_df, x="resale_price", title="Price Distribution of Matching Flats")
-              fig_price.update_xaxes(title_text="Resale Price")
-              st.plotly_chart(fig_price)
+                columns_to_display = ['Town', 'Flat Type', 'Block', 'Street Name', 'Storey Range', 'Floor Area Sqm', 'Remaining Lease', 'Resale Price', 'Month']
+                st.dataframe(display_df[columns_to_display].reset_index(drop=True))
 
-              # Average Price by Town
-              avg_price_by_town = filtered_df.groupby("town")["resale_price"].mean().sort_values(ascending=False)
-              fig_town = px.bar(avg_price_by_town, x=avg_price_by_town.index, y="resale_price", title="Average Price by Town")
-              fig_town.update_yaxes(title_text="Average Resale Price")
-              st.plotly_chart(fig_town)
+                # Visualizations
+                st.subheader("Visualizations")
 
-              # Price vs Floor Area
-              fig_area = px.scatter(filtered_df, x="floor_area_sqm", y="resale_price", color="flat_type", title="Price vs Floor Area")
-              fig_area.update_xaxes(title_text="Floor Area (sqm)")
-              fig_area.update_yaxes(title_text="Resale Price")
-              st.plotly_chart(fig_area)
+                # Price Distribution
+                fig_price = px.histogram(filtered_df, x="resale_price", title="Price Distribution of Matching Flats")
+                fig_price.update_xaxes(title_text="Resale Price")
+                st.plotly_chart(fig_price)
 
-          else:
-              st.write("No flats found within your budget and preferences.")
+                # Average Price by Town
+                avg_price_by_town = filtered_df.groupby("town")["resale_price"].mean().sort_values(ascending=False)
+                fig_town = px.bar(avg_price_by_town, x=avg_price_by_town.index, y="resale_price", title="Average Price by Town")
+                fig_town.update_yaxes(title_text="Average Resale Price")
+                st.plotly_chart(fig_town)
+
+                # Price vs Floor Area
+                fig_area = px.scatter(filtered_df, x="floor_area_sqm", y="resale_price", color="flat_type", title="Price vs Floor Area")
+                fig_area.update_xaxes(title_text="Floor Area (sqm)")
+                fig_area.update_yaxes(title_text="Resale Price")
+                st.plotly_chart(fig_area)
+
+            else:
+                st.write("No flats found within your budget and preferences.")
