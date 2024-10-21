@@ -213,7 +213,7 @@ else:
         common_queries = [
             "What are the eligibility criteria for buying an HDB resale flat?",
             "How do I apply for an HDB resale flat?",
-            "What are the steps involved in the resale process?",  # Updated query
+            "What are the steps involved in the resale process?",
             "What grants are available for HDB resale flats?",
             "How long does the HDB resale process take?"
         ]
@@ -246,15 +246,15 @@ else:
             else:
                 st.write("Please enter a question to get started.")
 
-        # Display chat history with improved formatting (latest conversation at the top)
+        # Display chat history with improved formatting (latest conversation at the top, user question before Rina's response)
         st.write("Chat History:")
-        for i, (role, message) in enumerate(reversed(st.session_state.chat_history)):
-            if i % 2 == 0:
+        for i in range(len(st.session_state.chat_history) - 1, -1, -2):
+            if i > 0:  # Ensure we have both question and answer
                 st.write("---")  # Add a separator between conversations
-            if role == "Human":
-                st.write(f"**You:** {message}")
-            else:
-                st.write(f"**Rina:** {message}")
+                human_message = st.session_state.chat_history[i-1][1]
+                rina_message = st.session_state.chat_history[i][1]
+                st.write(f"**You:** {human_message}")
+                st.write(f"**Rina:** {rina_message}")
 
     elif page == "HDB Resale Flat Search":
         st.write("""
