@@ -123,7 +123,39 @@ else:
         - **Methodology**: Understand the data flows and see the process flowcharts for each use case.
         - **HDB Resale Chatbot**: Chat with our virtual assistant about the HDB resale process.
         - **HDB Resale Flat Search**: Search for available resale flats based on your budget and preferences.""")
+
+    elif page == "About Us":
+        st.write("""### About Us
+        Welcome to the HDB Resale Guide project! This app is designed to provide a step-by-step guide to buying an HDB flat in Singapore, specifically in the resale market. Our goal is to provide users with a clear, easy-to-understand interface to navigate the complex process of purchasing a resale flat.
         
+        **Objectives:**
+        - Simplify the HDB resale process.
+        - Provide a personalized user experience.
+        - Integrate official data sources to ensure accuracy and relevancy.
+        
+        **Data Sources:**
+        - Data from the official HDB website.
+        - Resale flat price data from the data.gov.sg API.""")
+
+    elif page == "Methodology":
+        st.write("""### Methodology
+        The methodology behind this project includes the integration of various official data sources, scraping of relevant information, and the use of AI-driven chat functionalities to assist users. Here are the key components:
+        
+        **1. Data Collection:**
+        - Resale flat prices are obtained via the data.gov.sg API.
+        - The HDB website is scraped for detailed instructions on the resale process.
+        
+        **2. AI Chatbot:**
+        - The AI assistant, powered by the GPT-4 model, answers users' questions about the HDB resale process based on retrieved documents.
+        
+        **3. User Experience:**
+        - The app includes an interactive flat search feature, allowing users to filter resale flats based on their preferences and budget.
+        - Dynamic charts display trends in resale prices to give users insights into the current market.
+        
+        **4. Process Flowcharts:**
+        - Flowcharts are included to visually depict each step of the resale flat buying process.
+        - A detailed breakdown of the methods used to fetch, filter, and process the data will be available soon.""")
+
     elif page == "HDB Resale Chatbot":
         st.write("""Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process. Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, just ask me anything. I'm here to guide you every step of the way. Simply type your question below, and I'll provide you with the information you need.""")
         
@@ -160,28 +192,24 @@ else:
             "Price: Lowest to Highest": ("resale_price", True),
             "Price: Highest to Lowest": ("resale_price", False)
         }
-        sort_choice = st.selectbox("Sort by:", list(sort_options.keys()))
+        sort_choice = st.selectbox("Sort flats by:", list(sort_options.keys()))
+        sort_column, sort_ascending = sort_options[sort_choice]
         
-        if st.button("Search"):
-            filtered_df = df[df['resale_price'] <= budget]
-            if town != "Any":
-                filtered_df = filtered_df[filtered_df['town'] == town]
-            if flat_type != "Any":
-                filtered_df = filtered_df[filtered_df['flat_type'] == flat_type]
-            
-            sort_column, ascending = sort_options[sort_choice]
-            filtered_df = filtered_df.sort_values(by=sort_column, ascending=ascending)
-            
-            if not filtered_df.empty:
-                st.write(f"Found {len(filtered_df)} matching flats:")
-                filtered_df['resale_price'] = filtered_df['resale_price'].apply(lambda x: f"${x:,.0f}")
-                filtered_df['month'] = filtered_df['month'].dt.strftime('%Y-%m')
-                columns_to_display = ['Town', 'Flat Type', 'Block', 'Street Name', 'Storey Range', 'Floor Area Sqm', 'Remaining Lease', 'Resale Price', 'Month']
-                filtered_df.columns = filtered_df.columns.str.title().str.replace('_', ' ')
-                st.dataframe(filtered_df[columns_to_display].reset_index(drop=True))
+        filtered_data = df[df['resale_price'] <= budget]
+        if town != "Any":
+            filtered_data = filtered_data[filtered_data['town'] == town]
+        if flat_type != "Any":
+            filtered_data = filtered_data[filtered_data['flat_type'] == flat_type]
+        
+        sorted_data = filtered_data.sort_values(by=sort_column, ascending=sort_ascending)
+        
+        st.write("Resale Flats Available:")
+        st.write(f"Displaying {len(sorted_data)} flats within your budget.")
+        
+        st.write(sorted_data[['town', 'flat_type', 'resale_price', 'storey_range', 'floor_area_sqm']].head(10))
 
-                # Plotting the resale prices
-                fig = px.bar(filtered_df, x='Month', y='Resale Price', color='Town', title="Resale Price Distribution Over Time")
-                st.plotly_chart(fig)
-            else:
-                st.write("No flats found within your budget and preferences.")
+        st.write(f"Here is a chart of resale prices in your selected town and flat type:")
+        fig = px.box(sorted_data, x="flat_type", y="resale_price", title="Resale Price Distribution")
+        st.plotly_chart(fig)
+
+# Finalizing the requirements
