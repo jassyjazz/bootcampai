@@ -1,25 +1,28 @@
 import openai
 import json
 import streamlit as st
-import os
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import ChatOpenAI
-from langchain.agents import Tool
-from langchain_core.runnables import RunnablePassthrough
 from datetime import datetime
-import altair as alt
-import folium
-from folium.plugins import HeatMap
-import requests
-from streamlit_folium import folium_static
+import plotly.express as px
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
+
+# Password Protection
+def check_password():
+    if st.session_state.authenticated:
+        return True
+    password = st.text_input("Enter password to access the pages:", type="password")
+    if st.button("Enter"):
+        if password == "bootcamp123":
+            st.session_state.authenticated = True
+            return True
+        else:
+            st.error("Please enter the correct password to access the content.")
+    return False
 
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
@@ -72,187 +75,76 @@ def retrieve_relevant_documents(user_prompt):
         st.error(f"Error retrieving documents: {str(e)}")
         return "Error occurred while retrieving documents."
 
-# Initialize the LLM with gpt-4o-mini model
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    temperature=0, 
-    openai_api_key=st.secrets["general"]["OPENAI_API_KEY"]
-)
+# Load resale flat data from your CSV file
+@st.cache_data
+def load_resale_data():
+    url = "https://raw.githubusercontent.com/jassyjazz/bootcampai/main/resaleflatprices.csv"
+    df = pd.read_csv(url)
+    df['month'] = pd.to_datetime(df['month'])
+    return df
 
-# Create the prompt chain
-prompt_template = PromptTemplate(
-    input_variables=["relevant_docs", "question"],
-    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
-             'Provide accurate information based on the following context:\n\n'
-             '{relevant_docs}\n\n'
-             'Human: {question}\n'
-             'Rina: '
-)
+# Fetch coordinates (dummy example, replace with actual API or dataset if possible)
+@st.cache_data
+def get_coordinates():
+    coordinates_data = {
+        "Ang Mo Kio": (1.3691, 103.8454),
+        "Bedok": (1.3236, 103.9273),
+        "Bishan": (1.3516, 103.8485),
+        # Add more towns as needed
+    }
+    return coordinates_data
 
-chain = (
-    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
-    | prompt_template
-    | llm
-    | StrOutputParser()
-)
+# Interactive heatmap of HDB resale transactions
+def show_heatmap(df):
+    coordinates_data = get_coordinates()
 
-# Password Protection
-def check_password():
-    if st.session_state.authenticated:
-        return True
+    df['latitude'] = df['town'].map(lambda x: coordinates_data.get(x, (None, None))[0])
+    df['longitude'] = df['town'].map(lambda x: coordinates_data.get(x, (None, None))[1])
     
-    password = st.text_input("Enter password to access the pages:", type="password")
-    if st.button("Enter"):
-        if password == "bootcamp123":
-            st.session_state.authenticated = True
-            return True
-        else:
-            st.error("Please enter the correct password to access the content.")
-    return False
-
-# Show the page selection sidebar
-page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
-
-# Dynamic title based on the selected page
-st.title(f"{page} - HDB Resale Guide")
-
-# Function to generate historical resale price chart
-def plot_resale_price_trend(df, town=None, flat_type=None):
-    chart_data = df.copy()
+    df_filtered = df.dropna(subset=['latitude', 'longitude'])
     
-    if town != "Any":
-        chart_data = chart_data[chart_data['town'] == town]
-    if flat_type != "Any":
-        chart_data = chart_data[chart_data['flat_type'] == flat_type]
-    
-    line_chart = alt.Chart(chart_data).mark_line().encode(
-        x='month:T',
-        y='resale_price:Q',
-        color='town:N',
-        tooltip=['town', 'flat_type', 'resale_price', 'month']
-    ).interactive()
-    
-    st.altair_chart(line_chart, use_container_width=True)
+    fig = px.density_mapbox(df_filtered, lat='latitude', lon='longitude', z='resale_price',
+                            hover_name='town', hover_data=['flat_type', 'floor_area_sqm'],
+                            radius=10, mapbox_style="stamen-terrain",
+                            title="Heatmap of HDB Resale Transactions")
+    fig.update_layout(mapbox=dict(center=dict(lat=1.3521, lon=103.8198), zoom=10))
+    st.plotly_chart(fig)
 
-# Cache town coordinates
-@st.cache_data(ttl=86400)
-def get_coordinates(town):
-    try:
-        url = f"https://nominatim.openstreetmap.org/search?q={town}+Singapore&format=json"
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        if data:
-            return float(data[0]['lat']), float(data[0]['lon'])
-        else:
-            st.warning(f"Coordinates not found for {town}.")
-            return None, None
-    except Exception as e:
-        st.error(f"Error retrieving coordinates: {str(e)}")
-        return None, None
-
-# Heatmap of resale prices using online geocoding
-def create_heatmap(df):
-    heatmap_data = []
-    for town in df['town'].unique():
-        lat, lon = get_coordinates(town)
-        if lat and lon:
-            avg_price = df[df['town'] == town]['resale_price'].mean()
-            heatmap_data.append([lat, lon, avg_price])
-    
-    if heatmap_data:
-        m = folium.Map(location=[1.3521, 103.8198], zoom_start=11)
-        HeatMap(heatmap_data, max_value=df['resale_price'].max()).add_to(m)
-        folium_static(m)
-    else:
-        st.warning("No heatmap data available.")
-
-# Comparison tool for resale flats
-def compare_flats(filtered_df):
-    selected_flats = st.multiselect("Select up to 3 flats for comparison", filtered_df['block'].unique(), max_selections=3)
-
-    if selected_flats:
-        comparison_df = filtered_df[filtered_df['block'].isin(selected_flats)]
-        comparison_cols = ['Town', 'Flat Type', 'Resale Price', 'Floor Area Sqm', 'Storey Range', 'Remaining Lease']
-        comparison_df['Resale Price'] = comparison_df['Resale Price'].apply(lambda x: f"${x:,.0f}")
-        
-        st.write("Comparing Selected Flats:")
-        st.dataframe(comparison_df[comparison_cols].reset_index(drop=True))
-
-# Handle content for each page
+# Password protection logic and page content
 if not check_password():
     st.write("Please enter the correct password above to access the content.")
 else:
+    # Show the page selection sidebar
+    page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
+
+    # Dynamic title based on the selected page
+    st.title(f"{page} - HDB Resale Guide")
+
+    # Handle content for each page
     if page == "Home":
         st.write("""
             This application is designed to help you navigate the process of buying an HDB flat in the resale market.
-            You can learn about the buying procedure, interact with a virtual assistant, and search for available flats based on your budget.
-            
-            To get started, you can explore the following pages:
-            - **About Us**: Learn more about our project, objectives, and data sources.
-            - **Methodology**: Understand the data flows and see the process flowcharts for each use case.
-            - **HDB Resale Chatbot**: Chat with our virtual assistant about the HDB resale process.
-            - **HDB Resale Flat Search**: Search for available resale flats based on your budget and preferences.
+            Explore the pages to learn about the process, interact with a virtual assistant, and search for flats based on your budget.
         """)
-        
-        with st.expander("Disclaimer"):
-            st.write("""
-            IMPORTANT NOTICE: This web application is a prototype developed for educational purposes only. The information provided here is NOT intended for real-world usage and should not be relied upon for making any decisions, especially those related to financial, legal, or healthcare matters.
-
-            Furthermore, please be aware that the LLM may generate inaccurate or incorrect information. You assume full responsibility for how you use any generated output.
-
-            Always consult with qualified professionals for accurate and personalized advice.
-            """)
-
-    elif page == "About Us":
-        st.write("""
-            This project aims to guide users through the process of buying an HDB flat in the resale market.
-            Key features include an AI-powered chatbot to answer questions and a resale flat search based on budget.
-            Data sources include official HDB websites and data.gov.sg.
-        """)
-
-    elif page == "Methodology":
-        st.write("""
-            This section describes the data flow and implementation of the app:
-            1. **HDB Resale Chatbot**: 
-                - User inputs a question → Query is passed to Langchain model → Retrieve relevant documents from the HDB website or fallback JSON → Generate response → Display to user.
-            2. **HDB Resale Flat Search**: 
-                - User selects budget → Data fetched from CSV file → Filter flats within budget → Display relevant flats.
-        """)
-        # Flowchart for Use Cases (Illustrative Example)
-        st.write("Flowchart for Use Cases:")
-        st.image("methodology_flowchart.png")  # You can generate this from a tool like Graphviz.
-
-    elif page == "HDB Resale Chatbot":
-        st.write("""
-            Hi! I am **Rina**, your virtual HDB assistant. I'm here to help you with any questions you have about the HDB resale process.
-            Whether you're wondering about **eligibility**, **how to apply for a resale flat**, or **the procedures involved**, I'm here to assist you!
-        """)
-        
-        user_question = st.text_input("Type your question:")
-        if st.button("Submit"):
-            with st.spinner("Rina is thinking..."):
-                response = chain.invoke(user_question)
-                st.write(response)
-                
-            if "eligibility" in user_question.lower():
-                st.image("eligibility_flowchart.png")
-
     elif page == "HDB Resale Flat Search":
-        st.write("Search for resale flats based on your preferences and budget.")
+        df = load_resale_data()
+
+        st.write("Search for available HDB resale flats within your budget.")
+        budget = st.slider("Select your budget (SGD):", min_value=200000, max_value=1600000, step=50000)
+        town = st.selectbox("Select your preferred town:", ["Any"] + sorted(df['town'].unique().tolist()))
+        flat_type = st.selectbox("Select flat type:", ["Any"] + sorted(df['flat_type'].unique().tolist()))
         
-        # Load your dataset here. For example:
-        df = pd.read_csv("resale_flat_prices.csv")
-        filtered_df = df  # Filter the dataframe based on user input
-
-        # Historical resale price trends chart
-        st.write("Historical Resale Price Trends")
-        if st.button("Show Price Trends"):
-            plot_resale_price_trend(df, town="Any", flat_type="Any")
-
-        # Comparison tool
-        compare_flats(filtered_df)
-
-        # Heatmap
-        if st.button("Show Heatmap of Resale Prices"):
-            create_heatmap(df)
+        filtered_df = df[df['resale_price'] <= budget]
+        if town != "Any":
+            filtered_df = filtered_df[filtered_df['town'] == town]
+        if flat_type != "Any":
+            filtered_df = filtered_df[filtered_df['flat_type'] == flat_type]
+        
+        if not filtered_df.empty:
+            st.write(f"Found {len(filtered_df)} matching flats:")
+            st.dataframe(filtered_df[['town', 'flat_type', 'resale_price', 'floor_area_sqm', 'month']])
+            
+            # Show heatmap of transactions
+            show_heatmap(filtered_df)
+        else:
+            st.write("No flats found within your budget and preferences.")
