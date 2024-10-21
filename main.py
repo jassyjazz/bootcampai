@@ -112,6 +112,35 @@ page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology",
 # Dynamic title based on the selected page
 st.title(f"{page} - HDB Resale Guide")
 
+# Function to plot resale prices by town and flat type
+def plot_resale_prices(filtered_df):
+    fig = px.bar(filtered_df,
+                 x='town', 
+                 y='resale_price',
+                 color='flat_type', 
+                 title="Resale Prices by Town and Flat Type",
+                 labels={'resale_price': 'Resale Price (SGD)', 'town': 'Town'},
+                 color_discrete_sequence=px.colors.qualitative.Set1)  # Clear color distinction
+                 
+    # Adjust layout for better readability
+    fig.update_layout(
+        xaxis_title="Town",
+        yaxis_title="Resale Price (SGD)",
+        title_font=dict(size=20),
+        xaxis_tickangle=-45,  # Rotate x-axis labels for better readability
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        hovermode="x unified",  # Group hover information
+        showlegend=True
+    )
+    
+    # Add tooltips with additional information
+    fig.update_traces(
+        hovertemplate="<b>Town:</b> %{x}<br><b>Flat Type:</b> %{legendgroup}<br><b>Price:</b> %{y:,.0f} SGD<br><b>Floor Area:</b> %{customdata[0]} sqm"
+    )
+
+    return fig
+    
 # Handle content for each page
 if not check_password():
     st.write("Please enter the correct password above to access the content.")
@@ -160,19 +189,27 @@ else:
             st.write(response)
         
     elif page == "HDB Resale Flat Search":
-        st.write("""This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
+        st.write("""
+            This tool allows you to search for available HDB resale flats within your budget. Simply adjust the budget slider, select your preferred town and flat type, 
+            and the app will display matching resale flats based on data from a recent HDB resale transactions dataset.
         """)
-        
+    
         @st.cache_data
         def load_data():
             url = "https://raw.githubusercontent.com/jassyjazz/bootcampai/main/resaleflatprices.csv"
             df = pd.read_csv(url)
             df['month'] = pd.to_datetime(df['month'])
             return df
-
+    
         df = load_data()
-
-        budget = st.slider("Select your budget (SGD):", min_value=200000, max_value=1600000, step=50000)
+    
+        budget = st.slider(
+            "Select your budget (SGD):",
+            min_value=200000,
+            max_value=1600000,
+            step=50000
+        )
+    
         formatted_budget = f"SGD ${budget:,.0f}"
         st.write(f"Your selected budget: {formatted_budget}")
         
@@ -189,6 +226,7 @@ else:
         
         if st.button("Search"):
             filtered_df = df[df['resale_price'] <= budget]
+            
             if town != "Any":
                 filtered_df = filtered_df[filtered_df['town'] == town]
             if flat_type != "Any":
@@ -201,9 +239,8 @@ else:
                 st.write(f"Found {len(filtered_df)} matching flats:")
                 filtered_df['resale_price'] = filtered_df['resale_price'].apply(lambda x: f"SGD ${x:,.0f}")
                 st.dataframe(filtered_df[['town', 'flat_type', 'resale_price', 'storey_range', 'floor_area_sqm']])
+                
+                # Plot the updated resale prices chart
+                st.plotly_chart(plot_resale_prices(filtered_df))
             else:
                 st.write("No flats found matching your criteria.")
-            
-            # Plot the resale prices
-            fig = px.bar(filtered_df, x='town', y='resale_price', color='flat_type', title="Resale Prices by Town")
-            st.plotly_chart(fig)
