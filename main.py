@@ -12,6 +12,9 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
 from datetime import datetime
+from urllib.parse import urljoin
+import time
+import csv
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -22,21 +25,62 @@ if 'chat_history' not in st.session_state:
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
 def scrape_hdb_resale_info():
-    url = "https://www.hdb.gov.sg/cs/infoweb/residential/buying-a-flat/buying-procedure-for-resale-flats/overview"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        content_sections = soup.find_all('section')
-        scraped_data = []
-        for section in content_sections:
-            title = section.find('h2').get_text(strip=True) if section.find('h2') else "No Title"
-            content = section.get_text(strip=True)
-            scraped_data.append({'title': title, 'content': content})
-        return scraped_data
-    except Exception as e:
-        st.error(f"Error scraping HDB website: {str(e)}")
-        return []
+    base_url = "https://www.hdb.gov.sg/cs/infoweb/residential/buying-a-flat/buying-procedure-for-resale-flats"
+    start_url = "https://www.hdb.gov.sg/cs/infoweb/residential/buying-a-flat/buying-procedure-for-resale-flats/overview"
+    output_file = 'hdb_resale_data.csv'
+    visited = set()
+
+    def scrape_page(url):
+        if url in visited:
+            return
+
+        visited.add(url)
+
+        try:
+            response = requests.get(url, headers={'User-Agent': 'Custom Scraper 1.0'})
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Scrape content from the current page
+            title = soup.find('h1').text.strip() if soup.find('h1') else 'No Title'
+            content = soup.find('main').text.strip() if soup.find('main') else 'No Content'
+
+            # Save scraped data to CSV
+            with open(output_file, 'a', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow([url, title, content])
+
+            # Find all links on the page
+            links = soup.find_all('a', href=True)
+
+            for link in links:
+                full_url = urljoin(base_url, link['href'])
+
+                # Check if the link is within the same domain
+                if full_url.startswith(base_url) and full_url not in visited:
+                    # Delay to avoid overloading the server
+                    time.sleep(1)
+                    scrape_page(full_url)
+
+        except requests.RequestException as e:
+            st.error(f"Error scraping {url}: {e}")
+
+    # Create or clear the output file
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['URL', 'Title', 'Content'])
+
+    scrape_page(start_url)
+
+    # Read the CSV file and return the data
+    scraped_data = []
+    with open(output_file, 'r', newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        next(reader)  # Skip header
+        for row in reader:
+            scraped_data.append({'url': row[0], 'title': row[1], 'content': row[2]})
+
+    return scraped_data
 
 # Load fallback document for RAG from JSON
 def load_document():
