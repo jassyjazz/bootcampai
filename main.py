@@ -164,14 +164,28 @@ if not check_password():
 else:
     if page == "Home":
         st.write("""
-            This application is designed to help you navigate the process of buying an HDB flat in the resale market.
-            You can learn about the buying procedure, interact with a virtual assistant, and search for available flats based on your budget.
+        # Welcome to the HDB Resale Guide
 
-            To get started, you can explore the following pages:
-            - **About Us**: Learn more about our project, objectives, and data sources.
-            - **Methodology**: Understand the data flows and see the process flowcharts for each use case.
-            - **HDB Resale Chatbot**: Chat with our virtual assistant about the HDB resale process.
-            - **HDB Resale Flat Search**: Search for available resale flats based on your budget and preferences.
+        This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
+
+        ## Key Features:
+
+        1. **HDB Resale Chatbot**: Interact with Rina, our AI assistant, to get answers to your questions about the HDB resale process.
+        2. **HDB Resale Flat Search**: Find available resale flats based on your budget and preferences.
+        3. **Comprehensive Information**: Access detailed guides and up-to-date information about the HDB resale market.
+
+        ## How to Use This App:
+
+        1. Explore the different pages using the sidebar navigation.
+        2. Chat with Rina to get personalized answers to your HDB resale questions.
+        3. Use the Resale Flat Search tool to find properties within your budget.
+        4. Read through our methodology to understand how we process and present information.
+
+        Get started by selecting a page from the sidebar or by asking Rina a question about HDB resale flats!
+        """)
+
+        st.info("""
+        📌 Note: This application uses data from official HDB sources and is regularly updated to provide you with the most current information available.
         """)
 
         with st.expander("Disclaimer"):
