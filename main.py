@@ -72,11 +72,11 @@ llm = ChatOpenAI(
 # Create the prompt chain
 prompt_template = PromptTemplate(
     input_variables=["relevant_docs", "question"],
-    template='You are an AI assistant guiding users through the HDB resale process in Singapore. '
-             'Use the following information to answer the user\'s question:\n\n'
+    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+             'Provide accurate information based on the following context:\n\n'
              '{relevant_docs}\n\n'
              'Human: {question}\n'
-             'AI: '
+             'Rina: '
 )
 
 chain = (
@@ -86,14 +86,11 @@ chain = (
     | StrOutputParser()
 )
 
-# Streamlit App Pages
-
 # Password Protection
 password = st.text_input("Enter password to access the main page:", type="password")
 
-# If the password is incorrect, stop the execution immediately.
-if password != "bootcamp123" and password != "":
-    st.error("Incorrect password. Please try again.")
+if password != "bootcamp123":
+    st.error("Please enter the correct password to access the content.")
     st.stop()
 
 # After password validation, show the page selection sidebar
@@ -123,6 +120,16 @@ if page == "Home":
         - **HDB Resale Chatbot**: Chat with our virtual assistant about the HDB resale process.
         - **HDB Resale Flat Search**: Search for available resale flats based on your budget and preferences.
     """)
+    
+    with st.expander("Disclaimer"):
+        st.write("""
+        IMPORTANT NOTICE: This web application is a prototype developed for educational purposes only. The information provided here is NOT intended for real-world usage and should not be relied upon for making any decisions, especially those related to financial, legal, or healthcare matters.
+
+        Furthermore, please be aware that the LLM may generate inaccurate or incorrect information. You assume full responsibility for how you use any generated output.
+
+        Always consult with qualified professionals for accurate and personalized advice.
+        """)
+
 elif page == "About Us":
     st.write("""
         This project aims to guide users through the process of buying an HDB flat in the resale market.
@@ -150,7 +157,10 @@ elif page == "HDB Resale Chatbot":
     user_question = st.text_input("Ask a question about the HDB resale process:")
     if st.button("Submit"):
         if user_question:
-            response = chain.invoke(user_question)
+            # Sanitize user input
+            sanitized_question = user_question.replace("{", "").replace("}", "").replace("\\", "")
+            
+            response = chain.invoke(sanitized_question)
             st.write(response)
         else:
             st.write("Please enter a question to get started.")
@@ -160,7 +170,6 @@ elif page == "HDB Resale Flat Search":
         and the app will display matching resale flats based on data from data.gov.sg.
     """)
 
-    # Personalizing flat search with user inputs
     budget = st.slider(
         "Select your budget (SGD):",
         min_value=100000,
@@ -168,15 +177,23 @@ elif page == "HDB Resale Flat Search":
         step=50000
     )
 
-    # Display the formatted budget with commas as thousand separators and currency symbol
     formatted_budget = f"SGD ${budget:,.0f}"
     st.write(f"Your selected budget: {formatted_budget}")
+    
     town = st.selectbox("Select your preferred town:", ["Any", "Ang Mo Kio", "Bedok", "Bukit Merah", "Bukit Panjang", "Choa Chu Kang", "Hougang", "Jurong East"])
-    flat_type = st.selectbox("Select flat type:", ["Any", "2 Room", "3 Room", "4 Room", "5 Room", "Executive"])
-
-    def get_resale_flats_by_budget(budget, town, flat_type):
+    flat_type = st.selectbox("Select flat type:", ["Any", "2 ROOM", "3 ROOM", "4 ROOM", "5 ROOM", "EXECUTIVE"])
+    
+    sort_options = {
+        "Newest to Oldest": ("month", "descending"),
+        "Oldest to Newest": ("month", "ascending"),
+        "Price: Lowest to Highest": ("resale_price", "ascending"),
+        "Price: Highest to Lowest": ("resale_price", "descending")
+    }
+    sort_choice = st.selectbox("Sort by:", list(sort_options.keys()))
+    
+    def get_resale_flats_by_budget(budget, town, flat_type, sort_by="month", sort_order="descending"):
         datasetId = "d_8b84c4ee58e3cfc0ece0d773c8ca6abc"
-        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=100"
+        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={datasetId}&limit=1000"
         
         try:
             response = requests.get(url)
@@ -188,17 +205,35 @@ elif page == "HDB Resale Flat Search":
                 price = float(flat["resale_price"])
                 if price <= budget:
                     if (town == "Any" or flat["town"] == town) and (flat_type == "Any" or flat["flat_type"] == flat_type):
-                        filtered_flats.append(flat)
+                        filtered_flats.append({
+                            "town": flat["town"],
+                            "flat_type": flat["flat_type"],
+                            "block": flat["block"],
+                            "street_name": flat["street_name"],
+                            "storey_range": flat["storey_range"],
+                            "floor_area_sqm": flat["floor_area_sqm"],
+                            "remaining_lease": flat["remaining_lease"],
+                            "resale_price": f"${float(flat['resale_price']):,.0f}",
+                            "month": flat["month"]
+                        })
+            
+            # Sort the filtered flats
+            if sort_by == "resale_price":
+                filtered_flats.sort(key=lambda x: float(x["resale_price"].replace("$", "").replace(",", "")), reverse=(sort_order == "descending"))
+            else:
+                filtered_flats.sort(key=lambda x: x["month"], reverse=(sort_order == "descending"))
             
             return filtered_flats
         except Exception as e:
             st.error(f"Error fetching resale flat data: {str(e)}")
             return []
 
-    filtered_flats = get_resale_flats_by_budget(budget, town, flat_type)
-    if filtered_flats:
-        st.write(f"Found {len(filtered_flats)} matching flats:")
-        flats_df = pd.DataFrame(filtered_flats)
-        st.dataframe(flats_df)
-    else:
-        st.write("No flats found within your budget and preferences.")
+    if st.button("Search"):
+        sort_by, sort_order = sort_options[sort_choice]
+        filtered_flats = get_resale_flats_by_budget(budget, town, flat_type, sort_by, sort_order)
+        if filtered_flats:
+            st.write(f"Found {len(filtered_flats)} matching flats:")
+            flats_df = pd.DataFrame(filtered_flats)
+            st.dataframe(flats_df)
+        else:
+            st.write("No flats found within your budget and preferences.")
