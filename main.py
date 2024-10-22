@@ -167,8 +167,10 @@ def handle_feedback(message_index, feedback):
     st.session_state.feedback_count[feedback_type] += 1
     st.success(f"Thank you for your {feedback_type} feedback! We've recorded your response.")
 
-    message = st.session_state.chat_history[message_index]['message']
-    response = st.session_state.chat_history[message_index]['response']
+    # Access the chat history correctly
+    chat_entry = st.session_state.chat_history[message_index]
+    message = chat_entry[0] if isinstance(chat_entry, tuple) else chat_entry.get('message')
+    response = chat_entry[1] if isinstance(chat_entry, tuple) else chat_entry.get('response')
 
     if not feedback:
         st.info("We're sorry to hear that. Would you like to provide more detailed feedback?")
