@@ -667,10 +667,25 @@ else:
                     hovermode="closest",
                     hoverlabel=dict(bgcolor="white", font_size=12)
                 )
-                fig_area.update_traces(
-                    hovertemplate="Floor Area: %{x} sqm<br>Price: $%{y:,.0f}<br>Flat Type: %{customdata}",
-                    customdata=filtered_df['flat_type']
+
+                # Create a custom hover text
+                filtered_df['hover_text'] = filtered_df.apply(
+                    lambda row: f"Floor Area: {row['floor_area_sqm']} sqm<br>Price: ${row['resale_price']:,.0f}<br>Flat Type: {row['flat_type']}",
+                    axis=1
                 )
+
+                fig_area.data = []
+                for flat_type in filtered_df['flat_type'].unique():
+                    df_type = filtered_df[filtered_df['flat_type'] == flat_type]
+                    fig_area.add_trace(
+                        px.scatter(df_type, x="floor_area_sqm", y="resale_price", color="flat_type").data[0]
+                    )
+
+                fig_area.update_traces(
+                    hovertemplate="%{text}",
+                    text=filtered_df['hover_text']
+                )
+
                 st.plotly_chart(fig_area)
 
             else:
