@@ -27,15 +27,94 @@ if 'chat_history' not in st.session_state:
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
 def scrape_hdb_resale_info():
-    # ... (keep the existing scraping function)
+    base_url = "https://www.hdb.gov.sg/cs/infoweb/residential/buying-a-flat/buying-procedure-for-resale-flats"
+    start_url = "https://www.hdb.gov.sg/cs/infoweb/residential/buying-a-flat/buying-procedure-for-resale-flats/overview"
+    output_file = 'hdb_resale_data.csv'
+    visited = set()
+
+    def scrape_page(url):
+        if url in visited:
+            return
+
+        visited.add(url)
+
+        try:
+            response = requests.get(url, headers={'User-Agent': 'Custom Scraper 1.0'})
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Scrape content from the current page
+            title = soup.find('h1').text.strip() if soup.find('h1') else 'No Title'
+            content = soup.find('main').text.strip() if soup.find('main') else 'No Content'
+
+            # Save scraped data to CSV
+            with open(output_file, 'a', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow([url, title, content])
+
+            # Find all links on the page
+            links = soup.find_all('a', href=True)
+
+            for link in links:
+                full_url = urljoin(base_url, link['href'])
+
+                # Check if the link is within the same domain
+                if full_url.startswith(base_url) and full_url not in visited:
+                    # Delay to avoid overloading the server
+                    time.sleep(1)
+                    scrape_page(full_url)
+
+        except requests.RequestException as e:
+            st.error(f"Error scraping {url}: {e}")
+
+    # Create or clear the output file
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['URL', 'Title', 'Content'])
+
+    scrape_page(start_url)
+
+    # Read the CSV file and return the data
+    scraped_data = []
+    with open(output_file, 'r', newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        next(reader)  # Skip header
+        for row in reader:
+            scraped_data.append({'url': row[0], 'title': row[1], 'content': row[2]})
+
+    return scraped_data
 
 # Load fallback document for RAG from JSON
 def load_document():
-    # ... (keep the existing load_document function)
+    try:
+        with open("docs/buy_hdb_resale.json", "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        st.error("Error: 'buy_hdb_resale.json' file not found.")
+        raise
+    except json.JSONDecodeError:
+        st.error("Error: 'buy_hdb_resale.json' contains invalid JSON.")
+        raise
 
 # Retrieve relevant documents
 def retrieve_relevant_documents(user_prompt):
-    # ... (keep the existing retrieve_relevant_documents function)
+    try:
+        scraped_data = scrape_hdb_resale_info()
+        relevant_info = ""
+        for section in scraped_data:
+            if user_prompt.lower() in section['content'].lower():
+                relevant_info += f"{section['title']}: {section['content']}\n\n"
+
+        if not relevant_info:
+            documents = load_document()
+            for section in documents.get('sections', []):
+                if any(keyword in user_prompt.lower() for keyword in section.get('keywords', [])):
+                    relevant_info += f"{section['content']}\n\n"
+
+        return relevant_info or "No relevant information found."
+    except Exception as e:
+        st.error(f"Error retrieving documents: {str(e)}")
+        return "Error occurred while retrieving documents."
 
 # Initialize the LLM with gpt-4o-mini model
 llm = ChatOpenAI(
@@ -97,13 +176,140 @@ if not check_password():
     st.write("Please enter the correct password above to access the content.")
 else:
     if page == "Home":
-        # ... (keep the existing Home page content)
+        st.write("""
+        # Welcome to the HDB Resale Guide
+
+        This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
+
+        ## Key Features:
+
+        1. **HDB Resale Chatbot**: Interact with Rina, our AI assistant, to get answers to your questions about the HDB resale process.
+        2. **HDB Resale Flat Search**: Find available resale flats based on your budget and preferences.
+        3. **Comprehensive Information**: Access detailed guides and up-to-date information about the HDB resale market.
+
+        ## How to Use This App:
+
+        1. Explore the different pages using the sidebar navigation.
+        2. Chat with Rina to get personalized answers to your HDB resale questions.
+        3. Use the Resale Flat Search tool to find properties within your budget.
+        4. Read through our methodology to understand how we process and present information.
+
+        Get started by selecting a page from the sidebar or by asking Rina a question about HDB resale flats!
+        """)
+
+        st.info("""
+        📌 Note: This application uses data from official HDB sources and is regularly updated to provide you with the most current information available.
+        """)
+
+        with st.expander("Disclaimer"):
+            st.write("""
+            IMPORTANT NOTICE: This web application is a prototype developed for educational purposes only. The information provided here is NOT intended for real-world usage and should not be relied upon for making any decisions, especially those related to financial, legal, or healthcare matters.
+
+            Furthermore, please be aware that the LLM may generate inaccurate or incorrect information. You assume full responsibility for how you use any generated output.
+
+            Always consult with qualified professionals for accurate and personalized advice.
+            """)
 
     elif page == "About Us":
-        # ... (keep the existing About Us page content)
+        st.write("""
+        # About Us
+
+        ## Project Scope
+        Our HDB Resale Guide is a comprehensive tool designed to simplify the process of buying a resale HDB flat in Singapore. We aim to provide accurate, up-to-date information and interactive tools to assist potential buyers in making informed decisions.
+
+        ## Objectives
+        1. To demystify the HDB resale process for potential buyers.
+        2. To provide an AI-powered assistant capable of answering specific questions about HDB resale procedures.
+        3. To offer a user-friendly interface for searching available HDB resale flats based on budget and preferences.
+        4. To present data-driven insights into the HDB resale market trends.
+
+        ## Data Sources
+        Our application relies on the following data sources to ensure accuracy and relevance:
+        - Official HDB website (www.hdb.gov.sg)
+        - Data.gov.sg for HDB resale transaction data
+        - HDB press releases and official announcements
+
+        ## Features
+        1. **HDB Resale Chatbot (Rina)**:
+          - AI-powered assistant to answer user queries
+          - Utilizes natural language processing to understand and respond to questions
+          - Provides information based on the latest HDB guidelines and procedures
+
+        2. **HDB Resale Flat Search**:
+          - Interactive tool to search for resale flats within a specified budget
+          - Filters for town, flat type, and other preferences
+          - Displays relevant property details and transaction history
+
+        3. **Data Visualizations**:
+          - Price distribution charts
+          - Average price by town comparisons
+          - Price vs. floor area scatter plots
+
+        4. **Methodology Transparency**:
+          - Detailed explanation of our data processing and analysis methods
+          - Flowcharts illustrating the application's processes
+
+        We are committed to providing a valuable resource for anyone navigating the HDB resale market, combining the latest technology with comprehensive, reliable information.
+        """)
 
     elif page == "Methodology":
-        # ... (keep the existing Methodology page content)
+        st.write("""
+        # Methodology
+
+        This section describes the data flow and implementation details of our HDB Resale Guide application. We use a combination of web scraping, data processing, and machine learning techniques to provide accurate and up-to-date information.
+
+        ## 1. HDB Resale Chatbot
+
+        Our AI assistant, Rina, uses a retrieval-augmented generation (RAG) approach to answer user queries:
+
+        1. User inputs a question about the HDB resale process.
+        2. The query is passed to our Langchain model.
+        3. Relevant documents are retrieved from:
+          - Scraped HDB website content
+          - Fallback JSON document (if web scraping yields no results)
+        4. The retrieved context and user query are used to generate a response.
+        5. The response is displayed to the user in the chat interface.
+
+        ### Data Flow:
+        User Input → Query Processing → Document Retrieval → Context + Query to LLM → Response Generation → Display to User
+
+        ## 2. HDB Resale Flat Search
+
+        Our flat search feature processes data as follows:
+
+        1. User selects budget and preferences (town, flat type).
+        2. Data is fetched from a CSV file containing recent HDB resale transactions.
+        3. The application filters flats within the specified budget and preferences.
+        4. Matching flats are displayed in a table format.
+        5. Additional visualizations (price distribution, average price by town, etc.) are generated using Plotly.
+
+        ### Data Flow:
+        User Input (Budget/Preferences) → Data Filtering → Sorting → Result Display → Data Visualization
+
+        ## Implementation Details
+
+        - Web Scraping: We use BeautifulSoup to scrape the official HDB website daily.
+        - Data Processing: Pandas is used for data cleaning and manipulation.
+        - Language Model: We utilize the GPT-4o-mini model via the Langchain library.
+        - Visualization: Plotly Express is used for creating interactive charts and graphs.
+        - Data Storage: Scraped data is stored in CSV format for easy access and processing.
+
+        ## Security Measures
+
+        - User inputs are sanitized to prevent injection attacks.
+        - The application is password-protected to control access.
+        - We do not store personal user data or chat histories beyond the current session.
+
+        ## Limitations and Future Improvements
+
+        - The chatbot's knowledge is limited to its training data and may not cover very recent changes.
+        - The flat search feature relies on historical data and may not reflect real-time availability.
+        - Future versions aim to incorporate real-time data feeds and more advanced predictive analytics.
+        """)
+
+        # Flowchart for Use Cases
+        st.write("## Flowchart for Use Cases:")
+        st.image("methodology_flowchart.png", caption="Detailed Flowchart of Application Processes")
 
     elif page == "HDB Resale Chatbot":
         col1, col2 = st.columns([1, 3])
