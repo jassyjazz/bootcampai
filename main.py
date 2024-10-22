@@ -338,7 +338,7 @@ if not check_password():
     st.write("Please enter the correct password above to access the content.")
 else:
     if page == "Home":
-        col1, col2 = st.columns([1, 2])
+        col1, col2 = st.columns([1, 3])
         with col1:
             st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/hdb_logo.png", width=150)
         with col2:
