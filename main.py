@@ -253,22 +253,16 @@ def improve_chatbot_responses():
 
 # Function to analyse feedback
 def analyse_feedback():
-    with open('feedback_log.json', 'r') as f:
-        feedback_data = [json.loads(line) for line in f]
-
-    negative_feedback = [item for item in feedback_data if item['feedback'] == False]
-    positive_feedback = [item for item in feedback_data if item['feedback'] == True]
-
     st.subheader("Feedback Analysis")
 
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("Positive Feedback", len(positive_feedback))
+        st.metric("Positive Feedback", st.session_state.feedback_count['positive'])
     with col2:
-        st.metric("Negative Feedback", len(negative_feedback))
+        st.metric("Negative Feedback", st.session_state.feedback_count['negative'])
 
-    if negative_feedback:
-        st.warning(f"There are {len(negative_feedback)} instances of negative feedback. Here's the breakdown:")
+    if st.session_state.feedback_count['negative'] > 0:
+        st.warning(f"There are {st.session_state.feedback_count['negative']} instances of negative feedback. Here's the breakdown:")
 
         # Display feedback types
         for feedback_type, count in st.session_state.feedback_types.items():
@@ -278,6 +272,8 @@ def analyse_feedback():
 
     # Display recent feedback (both positive and negative)
     st.subheader("Recent Feedback")
+    with open('feedback_log.json', 'r') as f:
+        feedback_data = [json.loads(line) for line in f]
     for item in feedback_data[-5:]:  # Show last 5 feedback entries
         with st.expander(f"Feedback from {item['timestamp']}"):
             st.text(f"User: {item['message']}")
