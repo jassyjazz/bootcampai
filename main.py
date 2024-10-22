@@ -16,6 +16,9 @@ from urllib.parse import urljoin
 import time
 import csv
 import re
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -126,22 +129,82 @@ llm = ChatOpenAI(
     openai_api_key=st.secrets["general"]["OPENAI_API_KEY"]
 )
 
-# Create the prompt chain
-prompt_template = PromptTemplate(
-    input_variables=["relevant_docs", "question"],
-    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
-             'Provide accurate information based on the following context:\n\n'
-             '{relevant_docs}\n\n'
-             'Human: {question}\n'
-             'Rina: '
-)
+            # Update the prompt template with improvement areas
+            global prompt_template
+            improvement_areas = " ".join(top_issues['message'].tolist())
+            prompt_template = PromptTemplate(
+                input_variables=["relevant_docs", "question", "improvement_areas"],
+                template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+                         'Provide accurate information based on the following context:\n\n'
+                         '{relevant_docs}\n\n'
+                         'Human: {question}\n'
+                         'Improvement areas to focus on: {improvement_areas}\n'
+                         'Rina: '
+            )
 
-chain = (
-    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
-    | prompt_template
-    | llm
-    | StrOutputParser()
-)
+            # Update the chain with the new prompt template
+            global chain
+            chain = (
+                {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough(), "improvement_areas": lambda _: improvement_areas}
+                | prompt_template
+                | llm
+                | StrOutputParser()
+            )
+
+    # Periodically save feedback data to a CSV file
+    if len(st.session_state.feedback_data) % 10 == 0:  # Save every 10 feedback entries
+        st.session_state.feedback_data.to_csv('feedback_data.csv', index=False)
+
+# Initialize feedback data storage
+if 'feedback_data' not in st.session_state:
+    st.session_state.feedback_data = pd.DataFrame(columns=['message', 'feedback', 'detailed_feedback'])
+
+def handle_feedback(message_index, feedback):
+    st.session_state.feedback[message_index] = feedback
+    feedback_type = "positive" if feedback else "negative"
+    st.session_state.feedback_count[feedback_type] += 1
+    st.success(f"Thank you for your {feedback_type} feedback! We've recorded your response.")
+
+    # Store the feedback in the feedback_data DataFrame
+    message = st.session_state.chat_history[message_index][1]
+    new_feedback = pd.DataFrame({'message': [message], 'feedback': [feedback], 'detailed_feedback': ['']})
+    st.session_state.feedback_data = pd.concat([st.session_state.feedback_data, new_feedback], ignore_index=True)
+
+    # Trigger actions based on the feedback
+    if not feedback:
+        st.info("We're sorry to hear that. Would you like to provide more detailed feedback?")
+        detailed_feedback = st.text_area("Please tell us how we can improve:", key=f"detailed_feedback_{message_index}")
+        if detailed_feedback:
+            st.session_state.feedback_data.loc[st.session_state.feedback_data.index[-1], 'detailed_feedback'] = detailed_feedback
+            st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
+
+    # Use feedback to improve chatbot responses
+    improve_chatbot_responses()
+
+def improve_chatbot_responses():
+    positive_ratio = st.session_state.feedback_count['positive'] / (st.session_state.feedback_count['positive'] + st.session_state.feedback_count['negative'] + 1e-6)
+
+    if positive_ratio < 0.7:  # If less than 70% positive feedback
+        st.warning("We've noticed that our responses could be improved. We're working on enhancing our chatbot's performance.")
+
+        # Analyze feedback to identify areas for improvement
+        negative_feedback = st.session_state.feedback_data[st.session_state.feedback_data['feedback'] == False]
+        if not negative_feedback.empty:
+            vectorizer = TfidfVectorizer(stop_words='english')
+            tfidf_matrix = vectorizer.fit_transform(negative_feedback['message'])
+
+            # Find similar negative feedback
+            similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
+            np.fill_diagonal(similarity_matrix, 0)
+
+            # Identify top issues
+            top_issues = negative_feedback.iloc[similarity_matrix.sum(axis=1).argsort()[-3:][::-1]]
+
+            st.write("We've identified the following areas for improvement:")
+            for _, issue in top_issues.iterrows():
+                st.write(f"- {issue['message'][:100]}...")
+                if issue['detailed_feedback']:
+                    st.write(f"  Detailed feedback: {issue['detailed_feedback']}")
 
 # Password Protection
 def check_password():
@@ -156,41 +219,6 @@ def check_password():
         else:
             st.error("Please enter the correct password to access the content.")
     return False
-
-# Function to handle user feedback
-def handle_feedback(message_index, feedback):
-    st.session_state.feedback[message_index] = feedback
-    feedback_type = "positive" if feedback else "negative"
-    st.session_state.feedback_count[feedback_type] += 1
-    st.success(f"Thank you for your {feedback_type} feedback! We've recorded your response.")
-
-    # Store the feedback in a database or file
-    store_feedback(message_index, feedback, st.session_state.chat_history[message_index])
-
-    # Trigger actions based on the feedback
-    if not feedback:
-        st.info("We're sorry to hear that. Would you like to provide more detailed feedback?")
-        detailed_feedback = st.text_area("Please tell us how we can improve:", key=f"detailed_feedback_{message_index}")
-        if detailed_feedback:
-            store_detailed_feedback(message_index, detailed_feedback)
-            st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
-
-    # Use feedback to improve chatbot responses
-    improve_chatbot_responses()
-
-def store_feedback(message_index, feedback, message):
-    # Implement logic to store feedback in a database or file
-    pass
-
-def store_detailed_feedback(message_index, detailed_feedback):
-    # Implement logic to store detailed feedback in a database or file
-    pass
-
-def improve_chatbot_responses():
-    positive_ratio = st.session_state.feedback_count['positive'] / (st.session_state.feedback_count['positive'] + st.session_state.feedback_count['negative'] + 1e-6)
-
-    if positive_ratio < 0.7:  # If less than 70% positive feedback
-        st.warning("We've noticed that our responses could be improved. We're working on enhancing our chatbot's performance.")
 
 # Show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
