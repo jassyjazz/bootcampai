@@ -674,16 +674,20 @@ else:
                     axis=1
                 )
 
+                # Get the colour map from the original figure
+                color_map = fig_area.data[0].marker.color
+
+                # Clear the existing traces and add new ones with custom hover text
                 fig_area.data = []
                 for flat_type in filtered_df['flat_type'].unique():
                     df_type = filtered_df[filtered_df['flat_type'] == flat_type]
                     fig_area.add_trace(
-                        px.scatter(df_type, x="floor_area_sqm", y="resale_price", color="flat_type").data[0]
+                        px.scatter(df_type, x="floor_area_sqm", y="resale_price", color="flat_type", color_discrete_map={flat_type: color_map[flat_type]}).data[0]
                     )
 
                 fig_area.update_traces(
-                    hovertemplate="%{text}",
-                    text=filtered_df['hover_text']
+                    hovertemplate="%{customdata}",
+                    customdata=filtered_df['hover_text']
                 )
 
                 st.plotly_chart(fig_area)
