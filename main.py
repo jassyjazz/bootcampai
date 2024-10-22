@@ -340,7 +340,7 @@ else:
     if page == "Home":
         col1, col2 = st.columns([1, 3])
         with col1:
-            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/hdb_logo.png", width=150)
+            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/hdb_logo.png", width=100)
         with col2:
             st.markdown("<h1 style='margin-top: 0;'>Welcome to the HDB Resale Guide</h1>", unsafe_allow_html=True)
 
