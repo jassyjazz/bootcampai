@@ -15,8 +15,6 @@ from datetime import datetime
 from urllib.parse import urljoin
 import time
 import csv
-import hashlib
-import re
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -123,42 +121,31 @@ llm = ChatOpenAI(
     openai_api_key=st.secrets["general"]["OPENAI_API_KEY"]
 )
 
-# Create the prompt chain with improved prompt engineering
+# Create the prompt chain
 prompt_template = PromptTemplate(
-    input_variables=["relevant_docs", "question", "chat_history"],
-    template='''You are Rina, an AI assistant guiding users through the HDB resale process in Singapore.
-    Provide accurate information based on the following context and chat history:
-
-    Context:
-    {relevant_docs}
-
-    Chat History:
-    {chat_history}
-
-    Human: {question}
-    Rina: '''
+    input_variables=["relevant_docs", "question"],
+    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+             'Provide accurate information based on the following context:\n\n'
+             '{relevant_docs}\n\n'
+             'Human: {question}\n'
+             'Rina: '
 )
 
-# Function to get chat history as a string
-def get_chat_history():
-    return "\n".join([f"{role}: {message}" for role, message in st.session_state.chat_history[-5:]])
-
 chain = (
-    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough(), "chat_history": get_chat_history}
+    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
     | prompt_template
     | llm
     | StrOutputParser()
 )
 
-# Password Protection with improved security
+# Password Protection
 def check_password():
     if st.session_state.authenticated:
         return True
 
     password = st.text_input("Enter password to access the pages:", type="password")
     if st.button("Enter"):
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        if hashed_password == "2c5f3e6a2e1d5e4c1f9d8b7a6c3b2a1d":  # Hash of "bootcamp123"
+        if password == "bootcamp123":
             st.session_state.authenticated = True
             return True
         else:
@@ -315,7 +302,7 @@ else:
         col1, col2 = st.columns([1, 3])
 
         with col1:
-            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/boticon.png", use_column_width=True)
+            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/boticon.png", use_column_width=True)  # Adjust the width as needed
 
         with col2:
             st.write("""
@@ -352,7 +339,7 @@ else:
         if st.button("Submit"):
             if user_question:
                 # Sanitize user input
-                sanitized_question = re.sub(r'[^\w\s]', '', user_question)
+                sanitized_question = user_question.replace("{", "").replace("}", "").replace("\\", "")
                 st.session_state.chat_history.append(("Human", sanitized_question))
 
                 with st.spinner("Generating response..."):
@@ -361,11 +348,11 @@ else:
             else:
                 st.write("Please enter a question to get started.")
 
-        # Display chat history with improved formatting
+        # Display chat history with improved formatting (latest conversation at the top, user question before Rina's response)
         st.write("Chat History:")
         for i in range(len(st.session_state.chat_history) - 1, -1, -2):
-            if i > 0:
-                st.write("---")
+            if i > 0:  # Ensure we have both question and answer
+                st.write("---")  # Add a separator between conversations
                 human_message = st.session_state.chat_history[i-1][1]
                 rina_message = st.session_state.chat_history[i][1]
                 st.write(f"**You:** {human_message}")
@@ -422,10 +409,12 @@ else:
             if not filtered_df.empty:
                 st.write(f"Found {len(filtered_df)} matching flats:")
 
+                # Create a copy of the dataframe for display purposes
                 display_df = filtered_df.copy()
                 display_df['formatted_price'] = display_df['resale_price'].apply(lambda x: f"${x:,.0f}")
                 display_df['month'] = display_df['month'].dt.strftime('%Y-%m')
 
+                # Rename columns before selecting them
                 display_df = display_df.rename(columns={
                     'town': 'Town',
                     'flat_type': 'Flat Type',
@@ -463,10 +452,3 @@ else:
 
             else:
                 st.write("No flats found within your budget and preferences.")
-
-# Add a footer with disclaimer
-st.markdown("---")
-st.markdown("""
-    <small>Disclaimer: This application is for educational purposes only. The information provided may not be up-to-date or accurate.
-    Always consult official HDB sources and professionals for the most current and reliable information.</small>
-    """, unsafe_allow_html=True)
