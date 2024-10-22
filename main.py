@@ -339,12 +339,19 @@ if not check_password():
 else:
     if page == "Home":
         col1, col2 = st.columns([1, 2])
+        
         with col1:
             st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/hdb_logo.png", width=100)
+    
         with col2:
-            st.write("""
-        This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
-            """)
+            st.markdown(
+                """
+                <div style='margin-top: -10px;'> <!-- Adjust this value as needed -->
+                This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
         st.write("## Key Features:")
         st.write("""
