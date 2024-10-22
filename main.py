@@ -21,6 +21,8 @@ if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
+if 'feedback' not in st.session_state:
+    st.session_state.feedback = {}
 
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
@@ -151,6 +153,11 @@ def check_password():
         else:
             st.error("Please enter the correct password to access the content.")
     return False
+
+# Function to handle user feedback
+def handle_feedback(message_index, feedback):
+    st.session_state.feedback[message_index] = feedback
+    st.success(f"Thank you for your feedback! We've recorded your {'positive' if feedback else 'negative'} response.")
 
 # Show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
@@ -302,7 +309,7 @@ else:
         col1, col2 = st.columns([1, 3])
 
         with col1:
-            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/boticon.png", use_column_width=True)  # Adjust the width as needed
+            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/boticon.png", use_column_width=True)  
 
         with col2:
             st.write("""
@@ -339,7 +346,7 @@ else:
         if st.button("Submit"):
             if user_question:
                 # Sanitize user input
-                sanitized_question = user_question.replace("{", "").replace("}", "").replace("\\", "")
+                sanitized_question = re.sub(r'[^\w\s]', '', user_question)
                 st.session_state.chat_history.append(("Human", sanitized_question))
 
                 with st.spinner("Generating response..."):
@@ -348,15 +355,24 @@ else:
             else:
                 st.write("Please enter a question to get started.")
 
-        # Display chat history with improved formatting (latest conversation at the top, user question before Rina's response)
+        # Display chat history with improved formatting and feedback mechanism
         st.write("Chat History:")
         for i in range(len(st.session_state.chat_history) - 1, -1, -2):
-            if i > 0:  # Ensure we have both question and answer
-                st.write("---")  # Add a separator between conversations
+            if i > 0:
+                st.write("---")
                 human_message = st.session_state.chat_history[i-1][1]
                 rina_message = st.session_state.chat_history[i][1]
                 st.write(f"**You:** {human_message}")
                 st.write(f"**Rina:** {rina_message}")
+
+                # Add thumbs up/down buttons for feedback
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("👍", key=f"thumbs_up_{i}"):
+                        handle_feedback(i, True)
+                with col2:
+                    if st.button("👎", key=f"thumbs_down_{i}"):
+                        handle_feedback(i, False)
 
     elif page == "HDB Resale Flat Search":
         st.write("""
@@ -436,19 +452,35 @@ else:
                 # Price Distribution
                 fig_price = px.histogram(filtered_df, x="resale_price", title="Price Distribution of Matching Flats")
                 fig_price.update_xaxes(title_text="Resale Price")
+                fig_price.update_layout(
+                    hovermode="x",
+                    hoverlabel=dict(bgcolor="white", font_size=12),
+                    xaxis=dict(rangeslider=dict(visible=True), type="linear")
+                )
+                fig_price.update_traces(hovertemplate="Price: $%{x:,.0f}<br>Count: %{y}")
                 st.plotly_chart(fig_price)
 
                 # Average Price by Town
                 avg_price_by_town = filtered_df.groupby("town")["resale_price"].mean().sort_values(ascending=False)
                 fig_town = px.bar(avg_price_by_town, x=avg_price_by_town.index, y="resale_price", title="Average Price by Town")
                 fig_town.update_yaxes(title_text="Average Resale Price")
+                fig_town.update_layout(
+                    hovermode="x",
+                    hoverlabel=dict(bgcolor="white", font_size=12)
+                )
+                fig_town.update_traces(hovertemplate="Town: %{x}<br>Average Price: $%{y:,.0f}")
                 st.plotly_chart(fig_town)
 
                 # Price vs Floor Area
                 fig_area = px.scatter(filtered_df, x="floor_area_sqm", y="resale_price", color="flat_type", title="Price vs Floor Area")
                 fig_area.update_xaxes(title_text="Floor Area (sqm)")
                 fig_area.update_yaxes(title_text="Resale Price")
-                st.plotly_chart(fig_area)
+                fig_area.update_layout(
+                    hovermode="closest",
+                    hoverlabel=dict(bgcolor="white", font_size=12)
+                )
+                fig_area.update_traces(hovertemplate="Floor Area: %{x} sqm<br>Price: $%{y:,.0f}<br>Flat Type: %{marker.color}")
+                st.plotly_chart(fig_area) 
 
             else:
                 st.write("No flats found within your budget and preferences.")
