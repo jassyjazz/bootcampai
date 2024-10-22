@@ -302,7 +302,7 @@ else:
         col1, col2 = st.columns([1, 3])
 
         with col1:
-            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/boticon.png", width=100)  # Adjust the width as needed
+            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/boticon.png", use_column_width=True)  # Adjust the width as needed
 
         with col2:
             st.write("""
