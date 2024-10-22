@@ -18,6 +18,7 @@ import csv
 import re
 from functools import lru_cache
 from collections import Counter, defaultdict
+import plotly.graph_objects as go
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
