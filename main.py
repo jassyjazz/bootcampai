@@ -122,21 +122,109 @@ llm = ChatOpenAI(
 )
 
 # Create the prompt chain
-prompt_template = PromptTemplate(
+from langchain.prompts import PromptTemplate
+
+eligibility_prompt = PromptTemplate(
     input_variables=["relevant_docs", "question"],
-    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
-             'Provide accurate information based on the following context:\n\n'
-             '{relevant_docs}\n\n'
-             'Human: {question}\n'
-             'Rina: '
+    template="""You are Rina, an AI assistant specializing in HDB resale eligibility criteria.
+    Use the following information to answer questions about eligibility:
+
+    {relevant_docs}
+
+    Human: {question}
+    Rina:"""
 )
 
-chain = (
-    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
-    | prompt_template
-    | llm
-    | StrOutputParser()
+application_prompt = PromptTemplate(
+    input_variables=["relevant_docs", "question"],
+    template="""You are Rina, an AI assistant specializing in the HDB resale application process.
+    Use the following information to answer questions about applying for an HDB resale flat:
+
+    {relevant_docs}
+
+    Human: {question}
+    Rina:"""
 )
+
+grants_prompt = PromptTemplate(
+    input_variables=["relevant_docs", "question"],
+    template="""You are Rina, an AI assistant specializing in HDB resale grants.
+    Use the following information to answer questions about available grants for HDB resale flats:
+
+    {relevant_docs}
+
+    Human: {question}
+    Rina:"""
+)
+
+general_prompt = PromptTemplate(
+    input_variables=["relevant_docs", "question"],
+    template="""You are Rina, an AI assistant guiding users through the HDB resale process in Singapore.
+    Provide accurate information based on the following context:
+
+    {relevant_docs}
+
+    Human: {question}
+    Rina:"""
+)
+
+def get_appropriate_prompt(question):
+    question_lower = question.lower()
+    if "eligibility" in question_lower or "eligible" in question_lower:
+        return eligibility_prompt
+    elif "apply" in question_lower or "application" in question_lower:
+        return application_prompt
+    elif "grant" in question_lower:
+        return grants_prompt
+    else:
+        return general_prompt
+
+from langchain.chains import LLMChain
+
+def create_chain(prompt):
+    return LLMChain(llm=llm, prompt=prompt)
+
+def get_response(question):
+    relevant_docs = retrieve_relevant_documents(question)
+    appropriate_prompt = get_appropriate_prompt(question)
+    chain = create_chain(appropriate_prompt)
+    return chain.run(relevant_docs=relevant_docs, question=question)
+
+from langchain.chains import SimpleSequentialChain
+
+def complex_query_chain(question):
+    # Step 1: Determine the main topic of the question
+    topic_prompt = PromptTemplate(
+        input_variables=["question"],
+        template="Identify the main topic of this question about HDB resale: {question}"
+    )
+    topic_chain = LLMChain(llm=llm, prompt=topic_prompt)
+
+    # Step 2: Retrieve relevant information
+    info_prompt = PromptTemplate(
+        input_variables=["topic"],
+        template="Provide key information about {topic} in the HDB resale process."
+    )
+    info_chain = LLMChain(llm=llm, prompt=info_prompt)
+
+    # Step 3: Generate a detailed response
+    response_prompt = PromptTemplate(
+        input_variables=["question", "topic", "information"],
+        template="""Given the question: {question}
+        About the topic: {topic}
+        And this information: {information}
+
+        Provide a detailed and helpful response as Rina, the HDB resale assistant."""
+    )
+    response_chain = LLMChain(llm=llm, prompt=response_prompt)
+
+    # Combine the chains
+    overall_chain = SimpleSequentialChain(
+        chains=[topic_chain, info_chain, response_chain],
+        verbose=True
+    )
+
+    return overall_chain.run(question)
 
 # Password Protection
 def check_password():
@@ -169,6 +257,7 @@ else:
         This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
 
         ## Key Features:
+
 
         1. **HDB Resale Chatbot**: Interact with Rina, our AI assistant, to get answers to your questions about the HDB resale process.
         2. **HDB Resale Flat Search**: Find available resale flats based on your budget and preferences.
@@ -343,7 +432,10 @@ else:
                 st.session_state.chat_history.append(("Human", sanitized_question))
 
                 with st.spinner("Generating response..."):
-                    response = chain.invoke(sanitized_question)
+                    if len(sanitized_question.split()) > 15:  # Arbitrary threshold for complex questions
+                        response = complex_query_chain(sanitized_question)
+                    else:
+                        response = get_response(sanitized_question)
                 st.session_state.chat_history.append(("Rina", response))
             else:
                 st.write("Please enter a question to get started.")
