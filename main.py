@@ -380,8 +380,6 @@ else:
 
     elif page == "About Us":
         st.write("""
-        # About Us
-
         ## Project Scope
         HDB Resale Guide is a comprehensive tool designed to simplify the process of buying a resale HDB flat in Singapore. We aim to provide accurate, up-to-date information and interactive tools to assist potential buyers in making informed decisions.
 
@@ -420,8 +418,6 @@ else:
 
     elif page == "Methodology":
         st.write("""
-        # Methodology
-
         This section describes the data flow and implementation details of our HDB Resale Guide application. We use a combination of web scraping, data processing, and machine learning techniques to provide accurate and up-to-date information.
 
         ## 1. HDB Resale Chatbot
