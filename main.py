@@ -223,8 +223,8 @@ def analyse_feedback():
 
     st.info("We're using this feedback to improve our responses.")
 
-# Use feedback to improve chatbot responses
-improve_chatbot_responses()
+    # Use feedback to improve chatbot responses
+    improve_chatbot_responses()
 
 # Function to improve chatbot responses based on feedback
 def improve_chatbot_responses():
