@@ -11,6 +11,8 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
+from langchain import LLMChain
+from langchain.llms import OpenAI
 from datetime import datetime
 from urllib.parse import urljoin
 import time
