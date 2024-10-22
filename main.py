@@ -17,6 +17,7 @@ import time
 import csv
 import re
 from functools import lru_cache
+from collections import Counter
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -146,6 +147,19 @@ chain = (
     | StrOutputParser()
 )
 
+# Function to log feedback
+def log_feedback(message, response, feedback, detailed_feedback=None):
+    feedback_log = {
+        'timestamp': datetime.now().isoformat(),
+        'message': message,
+        'response': response,
+        'feedback': feedback,
+        'detailed_feedback': detailed_feedback
+    }
+    with open('feedback_log.json', 'a') as f:
+        json.dump(feedback_log, f)
+        f.write('\n')
+
 # Function to handle user feedback
 def handle_feedback(message_index, feedback):
     st.session_state.feedback[message_index] = feedback
@@ -153,78 +167,84 @@ def handle_feedback(message_index, feedback):
     st.session_state.feedback_count[feedback_type] += 1
     st.success(f"Thank you for your {feedback_type} feedback! We've recorded your response.")
 
-    # Store the feedback in a database or file
-    store_feedback(message_index, feedback, st.session_state.chat_history[message_index])
+    message = st.session_state.chat_history[message_index]['message']
+    response = st.session_state.chat_history[message_index]['response']
 
-    # Trigger actions based on the feedback
     if not feedback:
         st.info("We're sorry to hear that. Would you like to provide more detailed feedback?")
         detailed_feedback = st.text_area("Please tell us how we can improve:", key=f"detailed_feedback_{message_index}")
         if detailed_feedback:
-            store_detailed_feedback(message_index, detailed_feedback)
+            log_feedback(message, response, feedback, detailed_feedback)
             st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
+    else:
+        log_feedback(message, response, feedback)
 
     # Use feedback to improve chatbot responses
     improve_chatbot_responses()
 
-def store_feedback(message_index, feedback, message):
-    feedback_file = 'feedback.csv'
-    feedback_type = "positive" if feedback else "negative"
-
-    with open(feedback_file, 'a', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow([datetime.now(), message_index, feedback_type, message[0], message[1]])
-
-# Add a function to store detailed feedback in a CSV file
-def store_detailed_feedback(message_index, detailed_feedback):
-    detailed_feedback_file = 'detailed_feedback.csv'
-
-    with open(detailed_feedback_file, 'a', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow([datetime.now(), message_index, detailed_feedback])
-
-# Improve the chatbot responses based on feedback
+# Function to improve chatbot responses based on feedback
 def improve_chatbot_responses():
     positive_ratio = st.session_state.feedback_count['positive'] / (st.session_state.feedback_count['positive'] + st.session_state.feedback_count['negative'] + 1e-6)
 
     if positive_ratio < 0.7:  # If less than 70% positive feedback
-        st.warning("We've noticed that our responses could be improved. We're working on enhancing our chatbot's performance.")
+        st.warning("We've noticed that our responses could be improved. We're adjusting our system.")
 
-        # Analyze feedback and adjust the chatbot's behavior
-        analyze_feedback_and_adjust()
+        # Adjust the prompt template to encourage more accurate responses
+        global prompt_template
+        prompt_template = PromptTemplate(
+            input_variables=["relevant_docs", "question"],
+            template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+                     'Provide accurate, concise, and helpful information based on the following context. '
+                     'If you\'re unsure about any details, say so clearly. Focus on being more precise and '
+                     'addressing common user concerns:\n\n'
+                     '{relevant_docs}\n\n'
+                     'Human: {question}\n'
+                     'Rina: '
+        )
 
-# Add a function to analyze feedback and adjust the chatbot's behavior
-def analyze_feedback_and_adjust():
-    # Read the feedback CSV file and analyze patterns
-    feedback_data = pd.read_csv('feedback.csv', names=['timestamp', 'message_index', 'feedback_type', 'user_message', 'bot_response'])
+# Function to analyse feedback
+def analyse_feedback():
+    with open('feedback_log.json', 'r') as f:
+        feedback_data = [json.loads(line) for line in f]
 
-    # Identify common issues in negative feedback
-    negative_feedback = feedback_data[feedback_data['feedback_type'] == 'negative']
-    common_issues = negative_feedback['bot_response'].value_counts().head(5)
+    negative_feedback = [item for item in feedback_data if item['feedback'] == False]
+    positive_feedback = [item for item in feedback_data if item['feedback'] == True]
 
-    # Adjust the chatbot's behavior based on common issues
-    for issue, count in common_issues.items():
-        if count > 5:  # If an issue occurs more than 5 times
-            # Update the prompt template to address the issue
-            global prompt_template
-            prompt_template = PromptTemplate(
-                input_variables=["relevant_docs", "question"],
-                template=f'You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
-                         f'Provide accurate information based on the following context:\n\n'
-                         f'{{relevant_docs}}\n\n'
-                         f'Human: {{question}}\n'
-                         f'Rina: When responding, make sure to address the following common issue: {issue}\n'
-            )
+    st.subheader("Feedback Analysis")
 
-            # Update the chain with the new prompt template
-            global chain
-            chain = (
-                {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
-                | prompt_template
-                | llm
-                | StrOutputParser()
-            )
-            
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Positive Feedback", len(positive_feedback))
+    with col2:
+        st.metric("Negative Feedback", len(negative_feedback))
+
+    if negative_feedback:
+        st.warning(f"There are {len(negative_feedback)} instances of negative feedback. Here are the top issues:")
+
+        # Analyze common issues in negative feedback
+        common_issues = Counter()
+        for item in negative_feedback:
+            if item['detailed_feedback']:
+                words = item['detailed_feedback'].lower().split()
+                common_issues.update(words)
+
+        # Display top 5 common issues
+        top_issues = common_issues.most_common(5)
+        for issue, count in top_issues:
+            st.text(f"- {issue}: mentioned {count} times")
+
+        st.info("Consider addressing these issues to improve the chatbot's responses.")
+
+    # Display recent feedback
+    st.subheader("Recent Feedback")
+    for item in feedback_data[-5:]:  # Show last 5 feedback entries
+        with st.expander(f"Feedback from {item['timestamp']}"):
+            st.text(f"User: {item['message']}")
+            st.text(f"Rina: {item['response']}")
+            st.text(f"Feedback: {'Positive' if item['feedback'] else 'Negative'}")
+            if item['detailed_feedback']:
+                st.text(f"Detailed Feedback: {item['detailed_feedback']}")
+
 # Password Protection
 def check_password():
     if st.session_state.authenticated:
@@ -238,7 +258,7 @@ def check_password():
         else:
             st.error("Please enter the correct password to access the content.")
     return False
-    
+
 # Show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
 
@@ -454,18 +474,18 @@ else:
                     if st.button("👎", key=f"thumbs_down_{i}"):
                         handle_feedback(i, False)
 
-        # Display feedback statistics
-        st.sidebar.write("Feedback Statistics:")
-        st.sidebar.write(f"Positive Feedback: {st.session_state.feedback_count['positive']}")
-        st.sidebar.write(f"Negative Feedback: {st.session_state.feedback_count['negative']}")
+        # Button to analyse feedback
+        if st.button("Analyse Feedback"):
+            analyse_feedback()
 
-        # Display top issues based on feedback
-        if st.sidebar.button("Analyze Feedback"):
-            feedback_data = pd.read_csv('feedback.csv', names=['timestamp', 'message_index', 'feedback_type', 'user_message', 'bot_response'])
-            negative_feedback = feedback_data[feedback_data['feedback_type'] == 'negative']
-            common_issues = negative_feedback['bot_response'].value_counts().head(5)
-            st.sidebar.write("Top Issues:")
-            st.sidebar.write(common_issues)
+        # Sidebar for feedback summary
+        with st.sidebar:
+            st.subheader("Feedback Summary")
+            st.metric("Positive Feedback", st.session_state.feedback_count['positive'])
+            st.metric("Negative Feedback", st.session_state.feedback_count['negative'])
+
+            if st.button("View Detailed Analysis"):
+                analyse_feedback()
 
     elif page == "HDB Resale Flat Search":
         st.write("""
