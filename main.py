@@ -30,6 +30,8 @@ if 'feedback_count' not in st.session_state:
     st.session_state.feedback_count = {'positive': 0, 'negative': 0}
 if 'feedback_types' not in st.session_state:
     st.session_state.feedback_types = defaultdict(int)
+if 'pending_feedback' not in st.session_state:
+    st.session_state.pending_feedback = {}
 
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
@@ -169,40 +171,60 @@ def log_feedback(message, response, feedback, feedback_type=None, detailed_feedb
 
 # Function to handle user feedback
 def handle_feedback(message_index, feedback):
-    st.session_state.feedback[message_index] = feedback
-    feedback_type = "positive" if feedback else "negative"
-    st.session_state.feedback_count[feedback_type] += 1
-
-    chat_entry = st.session_state.chat_history[message_index]
-
-    # Handle both tuple and dictionary formats
-    if isinstance(chat_entry, tuple):
-        message, response = chat_entry
-    else:
-        message = chat_entry.get('message')
-        response = chat_entry.get('response')
-
-    if not feedback:
-        st.info("We're sorry to hear that. Please tell us what was wrong with the response:")
-        feedback_type = st.selectbox(
-            "What was the main issue?",
-            ["Too brief", "Too vague", "Not relevant", "Incorrect information", "Other"],
-            key=f"feedback_type_{message_index}"
-        )
-
-        detailed_feedback = st.text_area("Additional comments (optional):", key=f"detailed_feedback_{message_index}")
-        if st.button("Submit Feedback", key=f"submit_feedback_{message_index}"):
-            # Update the feedback types counter
-            st.session_state.feedback_types[feedback_type] += 1
-
-            log_feedback(message, response, feedback, feedback_type, detailed_feedback)
-            st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
-    else:
-        log_feedback(message, response, feedback)
+    if feedback:  # Positive feedback
+        st.session_state.feedback[message_index] = True
+        st.session_state.feedback_count['positive'] += 1
+        log_feedback(st.session_state.chat_history[message_index][0],
+                     st.session_state.chat_history[message_index][1],
+                     True)
         st.success("Thank you for your positive feedback!")
+    else:  # Negative feedback
+        st.session_state.feedback[message_index] = False
+        st.session_state.feedback_count['negative'] += 1
 
-    # Use feedback to improve chatbot responses
-    improve_chatbot_responses()
+        # Store the message index for pending negative feedback
+        st.session_state.pending_feedback[message_index] = {
+            'submitted': False,
+            'type': None,
+            'details': None
+        }
+
+# New function to handle negative feedback submission
+def submit_negative_feedback(message_index):
+    feedback_type = st.session_state[f"feedback_type_{message_index}"]
+    detailed_feedback = st.session_state[f"detailed_feedback_{message_index}"]
+
+    st.session_state.feedback_types[feedback_type] += 1
+    st.session_state.pending_feedback[message_index]['submitted'] = True
+    st.session_state.pending_feedback[message_index]['type'] = feedback_type
+    st.session_state.pending_feedback[message_index]['details'] = detailed_feedback
+
+    log_feedback(st.session_state.chat_history[message_index][0],
+                 st.session_state.chat_history[message_index][1],
+                 False, feedback_type, detailed_feedback)
+    st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
+
+# Update the analyse_feedback function
+def analyse_feedback():
+    st.subheader("Feedback Analysis")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Positive Feedback", st.session_state.feedback_count['positive'])
+    with col2:
+        st.metric("Negative Feedback", st.session_state.feedback_count['negative'])
+
+    if st.session_state.feedback_count['negative'] > 0:
+        st.warning(f"There are {st.session_state.feedback_count['negative']} instances of negative feedback. Here's the breakdown:")
+
+        # Display feedback types
+        for feedback_type, count in st.session_state.feedback_types.items():
+            st.text(f"- {feedback_type}: {count}")
+
+    st.info("We're using this feedback to improve our responses.")
+
+# Use feedback to improve chatbot responses
+improve_chatbot_responses()
 
 # Function to improve chatbot responses based on feedback
 def improve_chatbot_responses():
@@ -518,6 +540,18 @@ else:
                 with col2:
                     if st.button("👎", key=f"thumbs_down_{i}"):
                         handle_feedback(i, False)
+
+                # Display negative feedback form if needed
+                if i in st.session_state.pending_feedback and not st.session_state.pending_feedback[i]['submitted']:
+                    st.info("We're sorry to hear that. Please tell us what was wrong with the response:")
+                    feedback_type = st.selectbox(
+                        "What was the main issue?",
+                        ["Too brief", "Too vague", "Not relevant", "Incorrect information", "Other"],
+                        key=f"feedback_type_{i}"
+                    )
+                    detailed_feedback = st.text_area("Additional comments (optional):", key=f"detailed_feedback_{i}")
+                    if st.button("Submit Feedback", key=f"submit_feedback_{i}"):
+                        submit_negative_feedback(i)
 
         # Sidebar for feedback summary and analysis
         with st.sidebar:
