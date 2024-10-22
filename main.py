@@ -16,9 +16,6 @@ from urllib.parse import urljoin
 import time
 import csv
 import re
-import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -29,8 +26,6 @@ if 'feedback' not in st.session_state:
     st.session_state.feedback = {}
 if 'feedback_count' not in st.session_state:
     st.session_state.feedback_count = {'positive': 0, 'negative': 0}
-if 'feedback_data' not in st.session_state:
-    st.session_state.feedback_data = pd.DataFrame(columns=['message', 'feedback', 'detailed_feedback'])
 
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
@@ -124,88 +119,99 @@ def retrieve_relevant_documents(user_prompt):
         st.error(f"Error retrieving documents: {str(e)}")
         return "Error occurred while retrieving documents."
 
+# Initialize the LLM with gpt-4o-mini model
 llm = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0,
     openai_api_key=st.secrets["general"]["OPENAI_API_KEY"]
 )
 
-# Update the prompt template with improvement areas
-global prompt_template
-improvement_areas = " ".join(top_issues['message'].tolist())
+# Create the prompt chain
 prompt_template = PromptTemplate(
-    input_variables=["relevant_docs", "question", "improvement_areas"],
+    input_variables=["relevant_docs", "question"],
     template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
              'Provide accurate information based on the following context:\n\n'
              '{relevant_docs}\n\n'
              'Human: {question}\n'
-             'Improvement areas to focus on: {improvement_areas}\n'
              'Rina: '
 )
 
-# Update the chain with the new prompt template
-global chain
 chain = (
-    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough(), "improvement_areas": lambda _: improvement_areas}
+    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
     | prompt_template
     | llm
     | StrOutputParser()
 )
 
+# Function to handle user feedback
 def handle_feedback(message_index, feedback):
     st.session_state.feedback[message_index] = feedback
     feedback_type = "positive" if feedback else "negative"
     st.session_state.feedback_count[feedback_type] += 1
-    st.success(f"Thank you for your {feedback_type} feedback! We've recorded your response.")
 
-    # Store the feedback in the feedback_data DataFrame
-    message = st.session_state.chat_history[message_index][1]
-    new_feedback = pd.DataFrame({'message': [message], 'feedback': [feedback], 'detailed_feedback': ['']})
-    st.session_state.feedback_data = pd.concat([st.session_state.feedback_data, new_feedback], ignore_index=True)
+    if feedback:
+        st.success("Thank you for your positive feedback!")
+    else:
+        st.info("We're sorry to hear that. Could you tell us why the response was unsatisfactory?")
+        
+        # Structured feedback options
+        feedback_reason = st.selectbox("Why was the response unsatisfactory?", 
+                                       ["Too brief", "Too vague", "Not relevant", "Other"])
+        if feedback_reason:
+            detailed_feedback = st.text_area("Please provide additional details (optional):")
+            store_detailed_feedback(message_index, feedback_reason, detailed_feedback)
+        st.success("Thank you for your detailed feedback!")
+    
+    # Store feedback in CSV
+    store_feedback(message_index, feedback, st.session_state.chat_history[message_index])
 
-    # Trigger actions based on the feedback
-    if not feedback:
-        st.info("We're sorry to hear that. Would you like to provide more detailed feedback?")
-        detailed_feedback = st.text_area("Please tell us how we can improve:", key=f"detailed_feedback_{message_index}")
-        if detailed_feedback:
-            st.session_state.feedback_data.loc[st.session_state.feedback_data.index[-1], 'detailed_feedback'] = detailed_feedback
-            st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
+def store_detailed_feedback(message_index, feedback_reason, detailed_feedback):
+    # Logic to store more detailed feedback
+    with open("detailed_feedback.csv", "a", newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=["index", "feedback_reason", "detailed_feedback", "timestamp"])
+        if os.stat("detailed_feedback.csv").st_size == 0:
+            writer.writeheader()
+        writer.writerow({
+            "index": message_index,
+            "feedback_reason": feedback_reason,
+            "detailed_feedback": detailed_feedback,
+            "timestamp": datetime.now().isoformat()
+        })
 
-    # Use feedback to improve chatbot responses
-    improve_chatbot_responses()
+def improve_chatbot_responses(message):
+    # Analyze feedback from the CSV to detect common issues
+    positive_count, negative_count = 0, 0
+    with open("feedback_log.csv", "r") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            if row["feedback"] == "True":
+                positive_count += 1
+            else:
+                negative_count += 1
 
-def improve_chatbot_responses():
-    positive_ratio = st.session_state.feedback_count['positive'] / (st.session_state.feedback_count['positive'] + st.session_state.feedback_count['negative'] + 1e-6)
+    total_feedback = positive_count + negative_count
+    positive_ratio = positive_count / (total_feedback + 1e-6)  # Avoid division by zero
 
-    if positive_ratio < 0.7:  # If less than 70% positive feedback
-        st.warning("We've noticed that our responses could be improved. We're working on enhancing our chatbot's performance.")
+    if positive_ratio < 0.7:
+        # Modify future responses to be more detailed or clear for similar queries
+        st.warning("We've noticed a need for improvement in some responses. We'll adjust future replies to be more detailed.")
 
-        # Analyze feedback to identify areas for improvement
-        negative_feedback = st.session_state.feedback_data[st.session_state.feedback_data['feedback'] == False]
-        if not negative_feedback.empty:
-            vectorizer = TfidfVectorizer(stop_words='english')
-            tfidf_matrix = vectorizer.fit_transform(negative_feedback['message'])
+        # For simplicity, let's assume we're updating a "common issue" prompt
+        common_issues = analyze_common_issues(message)
+        new_template = f"You are Rina, an AI assistant guiding users through the HDB resale process. Be especially clear on {common_issues}."
+        
+        # Update the prompt chain dynamically
+        prompt_template.template = new_template
 
-            # Find similar negative feedback
-            similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
-            np.fill_diagonal(similarity_matrix, 0)
-
-            # Identify top issues
-            top_issues = negative_feedback.iloc[similarity_matrix.sum(axis=1).argsort()[-3:][::-1]]
-
-            st.write("We've identified the following areas for improvement:")
-            for _, issue in top_issues.iterrows():
-                st.write(f"- {issue['message'][:100]}...")
-                if issue['detailed_feedback']:
-                    st.write(f"  Detailed feedback: {issue['detailed_feedback']}")
-                    
-# Periodically save feedback data to a CSV file
-if len(st.session_state.feedback_data) % 10 == 0:  # Save every 10 feedback entries
-    st.session_state.feedback_data.to_csv('feedback_data.csv', index=False)
-
-# Initialize feedback data storage
-if 'feedback_data' not in st.session_state:
-    st.session_state.feedback_data = pd.DataFrame(columns=['message', 'feedback', 'detailed_feedback'])
+def analyze_common_issues(message):
+    # Dummy function to simulate analysis of common issues in messages
+    # This can be extended to use NLP techniques to identify patterns in feedback
+    if "eligibility" in message:
+        return "eligibility criteria"
+    elif "application" in message:
+        return "application procedures"
+    else:
+        return "the resale process"
 
 # Password Protection
 def check_password():
