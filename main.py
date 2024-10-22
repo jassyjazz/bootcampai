@@ -143,20 +143,6 @@ chain = (
     | StrOutputParser()
 )
 
-# Password Protection
-def check_password():
-    if st.session_state.authenticated:
-        return True
-
-    password = st.text_input("Enter password to access the pages:", type="password")
-    if st.button("Enter"):
-        if password == "bootcamp123":
-            st.session_state.authenticated = True
-            return True
-        else:
-            st.error("Please enter the correct password to access the content.")
-    return False
-
 # Function to handle user feedback
 def handle_feedback(message_index, feedback):
     st.session_state.feedback[message_index] = feedback
@@ -192,6 +178,20 @@ def improve_chatbot_responses():
     if positive_ratio < 0.7:  # If less than 70% positive feedback
         st.warning("We've noticed that our responses could be improved. We're working on enhancing our chatbot's performance.")
 
+# Password Protection
+def check_password():
+    if st.session_state.authenticated:
+        return True
+
+    password = st.text_input("Enter password to access the pages:", type="password")
+    if st.button("Enter"):
+        if password == "bootcamp123":
+            st.session_state.authenticated = True
+            return True
+        else:
+            st.error("Please enter the correct password to access the content.")
+    return False
+    
 # Show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
 
