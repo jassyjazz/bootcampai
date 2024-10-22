@@ -186,13 +186,13 @@ def handle_feedback(message_index, feedback):
             key=f"feedback_type_{message_index}"
         )
 
-        # Update the feedback types counter
-        if 'feedback_types' not in st.session_state:
-            st.session_state.feedback_types = Counter()
-        st.session_state.feedback_types[feedback_type] += 1
-
         detailed_feedback = st.text_area("Additional comments (optional):", key=f"detailed_feedback_{message_index}")
         if st.button("Submit Feedback", key=f"submit_feedback_{message_index}"):
+            # Only update the feedback types counter when the user submits
+            if 'feedback_types' not in st.session_state:
+                st.session_state.feedback_types = Counter()
+            st.session_state.feedback_types[feedback_type] += 1
+
             log_feedback(message, response, feedback, feedback_type, detailed_feedback)
             st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
     else:
@@ -265,7 +265,7 @@ def analyse_feedback():
     with col2:
         st.metric("Negative Feedback", st.session_state.feedback_count['negative'])
 
-    if st.session_state.feedback_count['negative'] > 0:
+    if st.session_state.feedback_count['negative'] > 0 and 'feedback_types' in st.session_state:
         st.warning(f"There are {st.session_state.feedback_count['negative']} instances of negative feedback. Here's the breakdown:")
 
         # Display feedback types
