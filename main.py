@@ -501,6 +501,9 @@ else:
             """,
             unsafe_allow_html=True
         )
+        
+        # Introductory Paragraph
+        st.write("This section describes the data flow and implementation details of our HDB Resale Guide application. We use a combination of web scraping, data processing, and machine learning techniques to provide accurate and up-to-date information.")
 
         # Section 1: HDB Resale Chatbot
         st.markdown("<div class='methodology-section'>", unsafe_allow_html=True)
