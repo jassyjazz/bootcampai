@@ -342,7 +342,7 @@ else:
         with col1:
             st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/hdb_logo.png", width=150)
         with col2:
-            st.write("# Welcome to the HDB Resale Guide")
+            st.markdown("<h1 style='margin-top: 0;'>Welcome to the HDB Resale Guide</h1>", unsafe_allow_html=True)
 
         st.write("""
         This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
