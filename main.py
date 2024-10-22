@@ -346,8 +346,10 @@ else:
         with col2:
             st.markdown(
                 """
-                <div style='margin-top: -50px;'> <!-- Adjust this value as needed -->
-                This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
+                <div style='display: flex; align-items: center;'>
+                    <p style='margin: 0; font-size: 18px;'> <!-- Adjust font size as needed -->
+                    This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
+                    </p>
                 </div>
                 """,
                 unsafe_allow_html=True
