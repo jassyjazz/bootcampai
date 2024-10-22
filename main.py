@@ -185,6 +185,10 @@ def handle_feedback(message_index, feedback):
             ["Too brief", "Too vague", "Not relevant", "Incorrect information", "Other"],
             key=f"feedback_type_{message_index}"
         )
+
+        # Update the feedback types counter
+        if 'feedback_types' not in st.session_state:
+            st.session_state.feedback_types = Counter()
         st.session_state.feedback_types[feedback_type] += 1
 
         detailed_feedback = st.text_area("Additional comments (optional):", key=f"detailed_feedback_{message_index}")
