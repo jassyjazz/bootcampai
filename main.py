@@ -16,6 +16,7 @@ from urllib.parse import urljoin
 import time
 import csv
 import re
+from functools import lru_cache
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -88,6 +89,7 @@ def scrape_hdb_resale_info():
     return scraped_data
 
 # Load fallback document for RAG from JSON
+@st.cache_data
 def load_document():
     try:
         with open("docs/buy_hdb_resale.json", "r") as file:
@@ -100,6 +102,7 @@ def load_document():
         raise
 
 # Retrieve relevant documents
+@lru_cache(maxsize=100)
 def retrieve_relevant_documents(user_prompt):
     try:
         scraped_data = scrape_hdb_resale_info()
@@ -122,7 +125,7 @@ def retrieve_relevant_documents(user_prompt):
 # Initialize the LLM with gpt-4o-mini model
 llm = ChatOpenAI(
     model="gpt-4o-mini",
-    temperature=0,
+    temperature=0.7,
     openai_api_key=st.secrets["general"]["OPENAI_API_KEY"]
 )
 
@@ -165,19 +168,63 @@ def handle_feedback(message_index, feedback):
     improve_chatbot_responses()
 
 def store_feedback(message_index, feedback, message):
-    # Implement logic to store feedback in a database or file
-    pass
+    feedback_file = 'feedback.csv'
+    feedback_type = "positive" if feedback else "negative"
 
+    with open(feedback_file, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow([datetime.now(), message_index, feedback_type, message[0], message[1]])
+
+# Add a function to store detailed feedback in a CSV file
 def store_detailed_feedback(message_index, detailed_feedback):
-    # Implement logic to store detailed feedback in a database or file
-    pass
+    detailed_feedback_file = 'detailed_feedback.csv'
 
+    with open(detailed_feedback_file, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow([datetime.now(), message_index, detailed_feedback])
+
+# Improve the chatbot responses based on feedback
 def improve_chatbot_responses():
     positive_ratio = st.session_state.feedback_count['positive'] / (st.session_state.feedback_count['positive'] + st.session_state.feedback_count['negative'] + 1e-6)
 
     if positive_ratio < 0.7:  # If less than 70% positive feedback
         st.warning("We've noticed that our responses could be improved. We're working on enhancing our chatbot's performance.")
 
+        # Analyze feedback and adjust the chatbot's behavior
+        analyze_feedback_and_adjust()
+
+# Add a function to analyze feedback and adjust the chatbot's behavior
+def analyze_feedback_and_adjust():
+    # Read the feedback CSV file and analyze patterns
+    feedback_data = pd.read_csv('feedback.csv', names=['timestamp', 'message_index', 'feedback_type', 'user_message', 'bot_response'])
+
+    # Identify common issues in negative feedback
+    negative_feedback = feedback_data[feedback_data['feedback_type'] == 'negative']
+    common_issues = negative_feedback['bot_response'].value_counts().head(5)
+
+    # Adjust the chatbot's behavior based on common issues
+    for issue, count in common_issues.items():
+        if count > 5:  # If an issue occurs more than 5 times
+            # Update the prompt template to address the issue
+            global prompt_template
+            prompt_template = PromptTemplate(
+                input_variables=["relevant_docs", "question"],
+                template=f'You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+                         f'Provide accurate information based on the following context:\n\n'
+                         f'{{relevant_docs}}\n\n'
+                         f'Human: {{question}}\n'
+                         f'Rina: When responding, make sure to address the following common issue: {issue}\n'
+            )
+
+            # Update the chain with the new prompt template
+            global chain
+            chain = (
+                {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
+                | prompt_template
+                | llm
+                | StrOutputParser()
+            )
+            
 # Password Protection
 def check_password():
     if st.session_state.authenticated:
@@ -406,6 +453,19 @@ else:
                 with col2:
                     if st.button("👎", key=f"thumbs_down_{i}"):
                         handle_feedback(i, False)
+
+        # Display feedback statistics
+        st.sidebar.write("Feedback Statistics:")
+        st.sidebar.write(f"Positive Feedback: {st.session_state.feedback_count['positive']}")
+        st.sidebar.write(f"Negative Feedback: {st.session_state.feedback_count['negative']}")
+
+        # Display top issues based on feedback
+        if st.sidebar.button("Analyze Feedback"):
+            feedback_data = pd.read_csv('feedback.csv', names=['timestamp', 'message_index', 'feedback_type', 'user_message', 'bot_response'])
+            negative_feedback = feedback_data[feedback_data['feedback_type'] == 'negative']
+            common_issues = negative_feedback['bot_response'].value_counts().head(5)
+            st.sidebar.write("Top Issues:")
+            st.sidebar.write(common_issues)
 
     elif page == "HDB Resale Flat Search":
         st.write("""
