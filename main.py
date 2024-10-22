@@ -480,13 +480,34 @@ else:
         st.markdown("</div>", unsafe_allow_html=True)
 
     elif page == "Methodology":
+        # Custom CSS for styling the Methodology page
+        st.markdown(
+            """
+            <style>
+            .methodology-title {
+                color: #2B2D42;
+                font-size: 36px;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .methodology-section {
+                background-color: #ffffff; 
+                border-radius: 5px;
+                padding: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # Section 1: HDB Resale Chatbot
+        st.markdown("<div class='methodology-section'>", unsafe_allow_html=True)
+        st.markdown("<h2>1. HDB Resale Chatbot</h2>", unsafe_allow_html=True)
         st.write("""
-        This section describes the data flow and implementation details of our HDB Resale Guide application. We use a combination of web scraping, data processing, and machine learning techniques to provide accurate and up-to-date information.
-
-        ## 1. HDB Resale Chatbot
-
         Our AI assistant, Rina, uses a retrieval-augmented generation (RAG) approach to answer user queries:
-
+    
         1. User inputs a question about the HDB resale process.
         2. The query is passed to our Langchain model.
         3. Relevant documents are retrieved from:
@@ -498,45 +519,66 @@ else:
             - For negative feedback, users can specify the type of issue (e.g. "Too brief", "Too vague", "Not relevant", "Incorrect information") and provide additional comments. 
         7. Chatbot responses will be dynamically modified according to user feedback. 
             - Based on the feedback, the system adjusts the prompt template used to generate responses. For example, if the feedback states that the response is "too brief", it adjusts the prompt to encourage more detailed responses. If the feedback states that the response is "too vague", it adjusts for more specific and concrete information.
-
-        ### Data Flow:
-        User Input → Query Processing → Document Retrieval → Context + Query to LLM → Response Generation → Display to User → Feedback Collection → Chatbot modify responses based on feedback, if positive feedback ratio falls below 70%
-
-        ## 2. HDB Resale Flat Search
-
+        """)
+    
+        # Data Flow Diagram for HDB Resale Chatbot
+        st.write("### Data Flow:")
+        st.write("User Input → Query Processing → Document Retrieval → Context + Query to LLM → Response Generation → Display to User → Feedback Collection → Chatbot modifies responses based on feedback, if positive feedback ratio falls below 70%")
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+        # Section 2: HDB Resale Flat Search
+        st.markdown("<div class='methodology-section'>", unsafe_allow_html=True)
+        st.markdown("<h2>2. HDB Resale Flat Search</h2>", unsafe_allow_html=True)
+        st.write("""
         Our flat search feature processes data as follows:
-
+    
         1. User selects budget and preferences (town, flat type).
         2. Data is fetched from a CSV file containing recent HDB resale transactions.
         3. The application filters flats within the specified budget and preferences.
         4. Matching flats are displayed in a table format.
         5. Additional visualizations (price distribution, average price by town, etc.) are generated using Plotly.
-
-        ### Data Flow:
-        User Input (Budget/Preferences) → Data Filtering → Sorting → Result Display → Data Visualization
-
-        ## Implementation Details
-
-        - Web Scraping: BeautifulSoup is used to scrape the official HDB website daily. Target data includes policies, procedures and FAQs. 
-        - Document retrieval: Based on retrieval-augmented generation (RAG) approach. Relevant information are retrieved from: (1) processed and indexed scraped HDB website content, and (2) fallback on JSON document (if webscraping yields no results)
-        - Data Processing: Pandas is used for data cleaning, manipulation and analysis. 
-        - Language Model: Based on the GPT-4o-mini model, accessed via the Langchain library. This model uses the retrieved context and user query to formulate answers. 
-        - Visualization: Plotly Express is used for creating interactive charts and graphs.
-        - Data Storage: Scraped data is stored in CSV format for easy access and processing.
-
-        ## Security Measures
-
+        """)
+    
+        # Data Flow Diagram for HDB Resale Flat Search
+        st.write("### Data Flow:")
+        st.write("User Input (Budget/Preferences) → Data Filtering → Sorting → Result Display → Data Visualization")
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+        # Section 3: Implementation Details
+        st.markdown("<div class='methodology-section'>", unsafe_allow_html=True)
+        st.markdown("<h2>Implementation Details</h2>", unsafe_allow_html=True)
+        st.write("""
+        - **Web Scraping**: BeautifulSoup is used to scrape the official HDB website daily. Target data includes policies, procedures, and FAQs. 
+        - **Document Retrieval**: Based on a retrieval-augmented generation (RAG) approach. Relevant information is retrieved from: 
+            1. Processed and indexed scraped HDB website content
+            2. Fallback on JSON document (if web scraping yields no results)
+        - **Data Processing**: Pandas is used for data cleaning, manipulation, and analysis. 
+        - **Language Model**: Based on the GPT-4o-mini model, accessed via the Langchain library. This model uses the retrieved context and user query to formulate answers. 
+        - **Visualization**: Plotly Express is used for creating interactive charts and graphs.
+        - **Data Storage**: Scraped data is stored in CSV format for easy access and processing.
+        """)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+        # Section 4: Security Measures
+        st.markdown("<div class='methodology-section'>", unsafe_allow_html=True)
+        st.markdown("<h2>Security Measures</h2>", unsafe_allow_html=True)
+        st.write("""
         - User inputs are sanitized to prevent injection attacks.
         - The application is password-protected to control access.
         - Personal user data or chat histories will not be stored beyond the current session.
-
-        ## Limitations and Future Improvements
-
+        """)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+        # Section 5: Limitations and Future Improvements
+        st.markdown("<div class='methodology-section'>", unsafe_allow_html=True)
+        st.markdown("<h2>Limitations and Future Improvements</h2>", unsafe_allow_html=True)
+        st.write("""
         - The chatbot's knowledge is limited to its training data and may not cover very recent changes.
         - The flat search feature relies on historical data and may not reflect real-time availability.
         - Future versions aim to incorporate real-time data feeds, implement predictive analytics for price forecasting, and expand the chatbot's capabilities to handle more complex queries and scenarios.
         """)
-
+        st.markdown("</div>", unsafe_allow_html=True)
+    
         # Flowchart for Use Cases
         st.write("## Flowchart for Use Cases:")
         st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/flowchart1.png", caption="HDB Resale Chatbot")
