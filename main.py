@@ -11,8 +11,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from langchain.agents import Tool
 from langchain_core.runnables import RunnablePassthrough
-from langchain import LLMChain
-from langchain.llms import OpenAI
 from datetime import datetime
 from urllib.parse import urljoin
 import time
@@ -124,51 +122,26 @@ def retrieve_relevant_documents(user_prompt):
 # Initialize the LLM with gpt-4o-mini model
 llm = ChatOpenAI(
     model="gpt-4o-mini",
-    temperature=0.7,
+    temperature=0,
     openai_api_key=st.secrets["general"]["OPENAI_API_KEY"]
 )
 
 # Create the prompt chain
-base_prompt = """
-You are Rina, a virtual HDB assistant. Your task is to help users with questions about the HDB resale process.
-{additional_instructions}
-Human: {human_input}
-Rina:
-"""
-
-prompt = PromptTemplate(
-    input_variables=["additional_instructions", "human_input"],
-    template=base_prompt
+prompt_template = PromptTemplate(
+    input_variables=["relevant_docs", "question"],
+    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+             'Provide accurate information based on the following context:\n\n'
+             '{relevant_docs}\n\n'
+             'Human: {question}\n'
+             'Rina: '
 )
 
-chain = LLMChain(llm=llm, prompt=prompt)
-
-def improve_chatbot_responses():
-    positive_ratio = st.session_state.feedback_count['positive'] / (st.session_state.feedback_count['positive'] + st.session_state.feedback_count['negative'] + 1e-6)
-
-    if positive_ratio < 0.7:  # If less than 70% positive feedback
-        st.warning("We've noticed that our responses could be improved. We're working on enhancing our chatbot's performance.")
-
-        # Adjust the chatbot's behavior by modifying the prompt
-        additional_instructions = """
-        Based on user feedback, please ensure your responses are:
-        1. More concise and to the point
-        2. Provide specific examples when explaining concepts
-        3. Use simpler language and avoid jargon
-        4. Double-check all factual information for accuracy
-        """
-    else:
-        additional_instructions = ""
-
-    # Update the chain with the new prompt
-    new_prompt = PromptTemplate(
-        input_variables=["additional_instructions", "human_input"],
-        template=base_prompt
-    )
-    chain.prompt = new_prompt
-
-# When generating a response:
-response = chain.run(additional_instructions=additional_instructions, human_input=user_question)
+chain = (
+    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough()}
+    | prompt_template
+    | llm
+    | StrOutputParser()
+)
 
 # Password Protection
 def check_password():
@@ -531,14 +504,8 @@ else:
                 fig_town.update_traces(hovertemplate="Town: %{x}<br>Average Price: $%{y:,.0f}")
                 st.plotly_chart(fig_town)
 
-                # Create a color map for flat types
-                flat_types = filtered_df['flat_type'].unique()
-                color_map = px.colors.qualitative.Set1[:len(flat_types)]
-                flat_type_color_map = dict(zip(flat_types, color_map))
-
                 # Price vs Floor Area
-                fig_area = px.scatter(filtered_df, x="floor_area_sqm", y="resale_price", color="flat_type",
-                                      title="Price vs Floor Area", color_discrete_map=flat_type_color_map)
+                fig_area = px.scatter(filtered_df, x="floor_area_sqm", y="resale_price", color="flat_type", title="Price vs Floor Area")
                 fig_area.update_xaxes(title_text="Floor Area (sqm)")
                 fig_area.update_yaxes(title_text="Resale Price")
                 fig_area.update_layout(
