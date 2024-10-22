@@ -28,6 +28,8 @@ if 'feedback' not in st.session_state:
     st.session_state.feedback = {}
 if 'feedback_count' not in st.session_state:
     st.session_state.feedback_count = {'positive': 0, 'negative': 0}
+if 'feedback_types' not in st.session_state:
+    st.session_state.feedback_types = Counter()
 
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
@@ -148,12 +150,13 @@ chain = (
 )
 
 # Function to log feedback
-def log_feedback(message, response, feedback, detailed_feedback=None):
+def log_feedback(message, response, feedback, feedback_type=None, detailed_feedback=None):
     feedback_log = {
         'timestamp': datetime.now().isoformat(),
         'message': message,
         'response': response,
         'feedback': feedback,
+        'feedback_type': feedback_type,
         'detailed_feedback': detailed_feedback
     }
     with open('feedback_log.json', 'a') as f:
@@ -165,44 +168,83 @@ def handle_feedback(message_index, feedback):
     st.session_state.feedback[message_index] = feedback
     feedback_type = "positive" if feedback else "negative"
     st.session_state.feedback_count[feedback_type] += 1
-    st.success(f"Thank you for your {feedback_type} feedback! We've recorded your response.")
 
-    # Access the chat history correctly
     chat_entry = st.session_state.chat_history[message_index]
-    message = chat_entry[0] if isinstance(chat_entry, tuple) else chat_entry.get('message')
-    response = chat_entry[1] if isinstance(chat_entry, tuple) else chat_entry.get('response')
+    message = chat_entry['message']
+    response = chat_entry['response']
 
     if not feedback:
-        st.info("We're sorry to hear that. Would you like to provide more detailed feedback?")
-        detailed_feedback = st.text_area("Please tell us how we can improve:", key=f"detailed_feedback_{message_index}")
-        if detailed_feedback:
-            log_feedback(message, response, feedback, detailed_feedback)
+        st.info("We're sorry to hear that. Please tell us what was wrong with the response:")
+        feedback_type = st.selectbox(
+            "What was the main issue?",
+            ["Too brief", "Too vague", "Not relevant", "Incorrect information", "Other"],
+            key=f"feedback_type_{message_index}"
+        )
+        st.session_state.feedback_types[feedback_type] += 1
+
+        detailed_feedback = st.text_area("Additional comments (optional):", key=f"detailed_feedback_{message_index}")
+        if st.button("Submit Feedback", key=f"submit_feedback_{message_index}"):
+            log_feedback(message, response, feedback, feedback_type, detailed_feedback)
             st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
     else:
         log_feedback(message, response, feedback)
+        st.success("Thank you for your positive feedback!")
 
     # Use feedback to improve chatbot responses
     improve_chatbot_responses()
 
 # Function to improve chatbot responses based on feedback
 def improve_chatbot_responses():
-    positive_ratio = st.session_state.feedback_count['positive'] / (st.session_state.feedback_count['positive'] + st.session_state.feedback_count['negative'] + 1e-6)
+    total_feedback = sum(st.session_state.feedback_count.values())
+    if total_feedback > 0:
+        positive_ratio = st.session_state.feedback_count['positive'] / total_feedback
 
-    if positive_ratio < 0.7:  # If less than 70% positive feedback
-        st.warning("We've noticed that our responses could be improved. We're adjusting our system.")
-
-        # Adjust the prompt template to encourage more accurate responses
         global prompt_template
-        prompt_template = PromptTemplate(
-            input_variables=["relevant_docs", "question"],
-            template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
-                     'Provide accurate, concise, and helpful information based on the following context. '
-                     'If you\'re unsure about any details, say so clearly. Focus on being more precise and '
-                     'addressing common user concerns:\n\n'
-                     '{relevant_docs}\n\n'
-                     'Human: {question}\n'
-                     'Rina: '
-        )
+        if positive_ratio < 0.7:  # If less than 70% positive feedback
+            st.warning("We've noticed that our responses could be improved. We're adjusting our system.")
+
+            # Adjust the prompt template based on feedback types
+            if st.session_state.feedback_types['Too brief'] > st.session_state.feedback_types['Too vague']:
+                prompt_template = PromptTemplate(
+                    input_variables=["relevant_docs", "question"],
+                    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+                             'Provide detailed and comprehensive information based on the following context. '
+                             'Ensure your responses are thorough and cover all relevant aspects:\n\n'
+                             '{relevant_docs}\n\n'
+                             'Human: {question}\n'
+                             'Rina: '
+                )
+            elif st.session_state.feedback_types['Too vague'] > st.session_state.feedback_types['Too brief']:
+                prompt_template = PromptTemplate(
+                    input_variables=["relevant_docs", "question"],
+                    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+                             'Provide clear, specific, and concrete information based on the following context. '
+                             'Use examples and precise details where possible:\n\n'
+                             '{relevant_docs}\n\n'
+                             'Human: {question}\n'
+                             'Rina: '
+                )
+            elif st.session_state.feedback_types['Not relevant'] > 0:
+                prompt_template = PromptTemplate(
+                    input_variables=["relevant_docs", "question"],
+                    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+                             'Ensure your responses are highly relevant to the user\'s question. '
+                             'Focus on addressing the specific query based on this context:\n\n'
+                             '{relevant_docs}\n\n'
+                             'Human: {question}\n'
+                             'Rina: '
+                )
+        else:
+            # Reset to default prompt if feedback is generally positive
+            prompt_template = PromptTemplate(
+                input_variables=["relevant_docs", "question"],
+                template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+                         'Provide accurate, concise, and helpful information based on the following context. '
+                         'If you\'re unsure about any details, say so clearly:\n\n'
+                         '{relevant_docs}\n\n'
+                         'Human: {question}\n'
+                         'Rina: '
+            )
 
 # Function to analyse feedback
 def analyse_feedback():
@@ -221,29 +263,23 @@ def analyse_feedback():
         st.metric("Negative Feedback", len(negative_feedback))
 
     if negative_feedback:
-        st.warning(f"There are {len(negative_feedback)} instances of negative feedback. Here are the top issues:")
+        st.warning(f"There are {len(negative_feedback)} instances of negative feedback. Here's the breakdown:")
 
-        # Analyze common issues in negative feedback
-        common_issues = Counter()
-        for item in negative_feedback:
-            if item['detailed_feedback']:
-                words = item['detailed_feedback'].lower().split()
-                common_issues.update(words)
+        # Display feedback types
+        for feedback_type, count in st.session_state.feedback_types.items():
+            st.text(f"- {feedback_type}: {count}")
 
-        # Display top 5 common issues
-        top_issues = common_issues.most_common(5)
-        for issue, count in top_issues:
-            st.text(f"- {issue}: mentioned {count} times")
+        st.info("We're using this feedback to improve our responses.")
 
-        st.info("Consider addressing these issues to improve the chatbot's responses.")
-
-    # Display recent feedback
+    # Display recent feedback (both positive and negative)
     st.subheader("Recent Feedback")
     for item in feedback_data[-5:]:  # Show last 5 feedback entries
         with st.expander(f"Feedback from {item['timestamp']}"):
             st.text(f"User: {item['message']}")
             st.text(f"Rina: {item['response']}")
             st.text(f"Feedback: {'Positive' if item['feedback'] else 'Negative'}")
+            if item['feedback_type']:
+                st.text(f"Feedback Type: {item['feedback_type']}")
             if item['detailed_feedback']:
                 st.text(f"Detailed Feedback: {item['detailed_feedback']}")
 
@@ -476,11 +512,7 @@ else:
                     if st.button("👎", key=f"thumbs_down_{i}"):
                         handle_feedback(i, False)
 
-        # Button to analyse feedback
-        if st.button("Analyse Feedback"):
-            analyse_feedback()
-
-        # Sidebar for feedback summary
+        # Sidebar for feedback summary and analysis
         with st.sidebar:
             st.subheader("Feedback Summary")
             st.metric("Positive Feedback", st.session_state.feedback_count['positive'])
