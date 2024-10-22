@@ -24,6 +24,8 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 if 'feedback' not in st.session_state:
     st.session_state.feedback = {}
+if 'feedback_count' not in st.session_state:
+    st.session_state.feedback_count = {'positive': 0, 'negative': 0}
 
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
@@ -159,19 +161,36 @@ def check_password():
 def handle_feedback(message_index, feedback):
     st.session_state.feedback[message_index] = feedback
     feedback_type = "positive" if feedback else "negative"
+    st.session_state.feedback_count[feedback_type] += 1
     st.success(f"Thank you for your {feedback_type} feedback! We've recorded your response.")
 
-    # Here you can add code to store the feedback in a database or file
-    # For example:
-    # store_feedback(message_index, feedback, st.session_state.chat_history[message_index])
+    # Store the feedback in a database or file
+    store_feedback(message_index, feedback, st.session_state.chat_history[message_index])
 
-    # You can also trigger actions based on the feedback
+    # Trigger actions based on the feedback
     if not feedback:
         st.info("We're sorry to hear that. Would you like to provide more detailed feedback?")
         detailed_feedback = st.text_area("Please tell us how we can improve:", key=f"detailed_feedback_{message_index}")
         if detailed_feedback:
-            # Store or process the detailed feedback
+            store_detailed_feedback(message_index, detailed_feedback)
             st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
+
+    # Use feedback to improve chatbot responses
+    improve_chatbot_responses()
+
+def store_feedback(message_index, feedback, message):
+    # Implement logic to store feedback in a database or file
+    pass
+
+def store_detailed_feedback(message_index, detailed_feedback):
+    # Implement logic to store detailed feedback in a database or file
+    pass
+
+def improve_chatbot_responses():
+    positive_ratio = st.session_state.feedback_count['positive'] / (st.session_state.feedback_count['positive'] + st.session_state.feedback_count['negative'] + 1e-6)
+
+    if positive_ratio < 0.7:  # If less than 70% positive feedback
+        st.warning("We've noticed that our responses could be improved. We're working on enhancing our chatbot's performance.")
 
 # Show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
@@ -493,7 +512,8 @@ else:
                     hovermode="closest",
                     hoverlabel=dict(bgcolor="white", font_size=12)
                 )
-                fig_area.update_traces(hovertemplate="Floor Area: %{x} sqm<br>Price: $%{y:,.0f}<br>Flat Type: %{marker.color}")
+                fig_area.update_traces(hovertemplate="Floor Area: %{x} sqm<br>Price: $%{y:,.0f}<br>Flat Type: %{customdata[0]}")
+                fig_area.update_traces(customdata=filtered_df[['flat_type']])
                 st.plotly_chart(fig_area)
 
             else:
