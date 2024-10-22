@@ -143,76 +143,6 @@ chain = (
     | StrOutputParser()
 )
 
-# Function to handle user feedback
-def handle_feedback(message_index, feedback):
-    st.session_state.feedback[message_index] = feedback
-    feedback_type = "positive" if feedback else "negative"
-    st.session_state.feedback_count[feedback_type] += 1
-
-    if feedback:
-        st.success("Thank you for your positive feedback!")
-    else:
-        st.info("We're sorry to hear that. Could you tell us why the response was unsatisfactory?")
-        
-        # Structured feedback options
-        feedback_reason = st.selectbox("Why was the response unsatisfactory?", 
-                                       ["Too brief", "Too vague", "Not relevant", "Other"])
-        if feedback_reason:
-            detailed_feedback = st.text_area("Please provide additional details (optional):")
-            store_detailed_feedback(message_index, feedback_reason, detailed_feedback)
-        st.success("Thank you for your detailed feedback!")
-    
-    # Store feedback in CSV
-    store_feedback(message_index, feedback, st.session_state.chat_history[message_index])
-
-def store_detailed_feedback(message_index, feedback_reason, detailed_feedback):
-    # Logic to store more detailed feedback
-    with open("detailed_feedback.csv", "a", newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=["index", "feedback_reason", "detailed_feedback", "timestamp"])
-        if os.stat("detailed_feedback.csv").st_size == 0:
-            writer.writeheader()
-        writer.writerow({
-            "index": message_index,
-            "feedback_reason": feedback_reason,
-            "detailed_feedback": detailed_feedback,
-            "timestamp": datetime.now().isoformat()
-        })
-
-def improve_chatbot_responses(message):
-    # Analyze feedback from the CSV to detect common issues
-    positive_count, negative_count = 0, 0
-    with open("feedback_log.csv", "r") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if row["feedback"] == "True":
-                positive_count += 1
-            else:
-                negative_count += 1
-
-    total_feedback = positive_count + negative_count
-    positive_ratio = positive_count / (total_feedback + 1e-6)  # Avoid division by zero
-
-    if positive_ratio < 0.7:
-        # Modify future responses to be more detailed or clear for similar queries
-        st.warning("We've noticed a need for improvement in some responses. We'll adjust future replies to be more detailed.")
-
-        # For simplicity, let's assume we're updating a "common issue" prompt
-        common_issues = analyze_common_issues(message)
-        new_template = f"You are Rina, an AI assistant guiding users through the HDB resale process. Be especially clear on {common_issues}."
-        
-        # Update the prompt chain dynamically
-        prompt_template.template = new_template
-
-def analyze_common_issues(message):
-    # Dummy function to simulate analysis of common issues in messages
-    # This can be extended to use NLP techniques to identify patterns in feedback
-    if "eligibility" in message:
-        return "eligibility criteria"
-    elif "application" in message:
-        return "application procedures"
-    else:
-        return "the resale process"
-
 # Password Protection
 def check_password():
     if st.session_state.authenticated:
@@ -226,6 +156,41 @@ def check_password():
         else:
             st.error("Please enter the correct password to access the content.")
     return False
+
+# Function to handle user feedback
+def handle_feedback(message_index, feedback):
+    st.session_state.feedback[message_index] = feedback
+    feedback_type = "positive" if feedback else "negative"
+    st.session_state.feedback_count[feedback_type] += 1
+    st.success(f"Thank you for your {feedback_type} feedback! We've recorded your response.")
+
+    # Store the feedback in a database or file
+    store_feedback(message_index, feedback, st.session_state.chat_history[message_index])
+
+    # Trigger actions based on the feedback
+    if not feedback:
+        st.info("We're sorry to hear that. Would you like to provide more detailed feedback?")
+        detailed_feedback = st.text_area("Please tell us how we can improve:", key=f"detailed_feedback_{message_index}")
+        if detailed_feedback:
+            store_detailed_feedback(message_index, detailed_feedback)
+            st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
+
+    # Use feedback to improve chatbot responses
+    improve_chatbot_responses()
+
+def store_feedback(message_index, feedback, message):
+    # Implement logic to store feedback in a database or file
+    pass
+
+def store_detailed_feedback(message_index, detailed_feedback):
+    # Implement logic to store detailed feedback in a database or file
+    pass
+
+def improve_chatbot_responses():
+    positive_ratio = st.session_state.feedback_count['positive'] / (st.session_state.feedback_count['positive'] + st.session_state.feedback_count['negative'] + 1e-6)
+
+    if positive_ratio < 0.7:  # If less than 70% positive feedback
+        st.warning("We've noticed that our responses could be improved. We're working on enhancing our chatbot's performance.")
 
 # Show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
