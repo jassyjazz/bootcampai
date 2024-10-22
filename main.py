@@ -377,42 +377,111 @@ else:
             """)
 
     elif page == "About Us":
+    elif page == "About Us":
+        # Custom CSS for styling the About Us page
+        st.markdown(
+            """
+            <style>
+            .about-title {
+                color: #2B2D42;
+                font-size: 36px;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .about-section {
+                background-color: #ffffff; 
+                border-radius: 5px;
+                padding: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+            }
+            .about-list {
+                margin-left: 20px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+    
+        # Title for the About Us page
+        st.markdown("<h1 class='about-title'>About Us</h1>", unsafe_allow_html=True)
+    
+        # Section 1: Project Scope
+        st.markdown("<div class='about-section'>", unsafe_allow_html=True)
+        st.markdown("<h2>Project Scope</h2>", unsafe_allow_html=True)
         st.write("""
-        ## Project Scope
         HDB Resale Guide is a comprehensive tool designed to simplify the process of buying a resale HDB flat in Singapore. We aim to provide accurate, up-to-date information and interactive tools to assist potential buyers in making informed decisions.
-
-        ## Objectives
-        1. To simplify the HDB resale process for potential buyers.
-        2. To provide an AI-powered assistant capable of answering specific questions about HDB resale procedures.
-        3. To offer a user-friendly interface for searching available HDB resale flats based on budget and preferences.
-        4. To present data-driven insights into the HDB resale market trends.
-
-        ## Data Sources
-        Our application relies on the following data sources to ensure accuracy and relevance:
-        - Official HDB website (www.hdb.gov.sg)
-        - Data.gov.sg for HDB resale transaction data
-
-        ## Features
-        1. **HDB Resale Chatbot (Rina)**:
-            - AI-powered assistant to answer user queries
-            - Utilizes natural language processing to understand and respond to questions
-            - Provides information based on the latest HDB guidelines and procedures
-
-        2. **HDB Resale Flat Search**:
-            - Interactive tool to search for resale flats within a specified budget
-            - Filters for town, flat type, and other preferences
-            - Displays relevant property details and transaction history
-
-        3. **Data Visualizations**:
-            - Price distribution charts
-            - Average price by town comparisons
-            - Price vs. floor area scatter plots
-
-        4. **Methodology**:
-            - Detailed explanation of our data processing and analysis methods
-            - Flowcharts illustrating the application's processes
-
         """)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+        # Section 2: Objectives
+        st.markdown("<div class='about-section'>", unsafe_allow_html=True)
+        st.markdown("<h2>Objectives</h2>", unsafe_allow_html=True)
+        st.write("Our main objectives include:")
+        objectives = [
+            "To simplify the HDB resale process for potential buyers.",
+            "To provide an AI-powered assistant capable of answering specific questions about HDB resale procedures.",
+            "To offer a user-friendly interface for searching available HDB resale flats based on budget and preferences.",
+            "To present data-driven insights into the HDB resale market trends."
+        ]
+        for obj in objectives:
+            st.markdown(f"- {obj}", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+        # Section 3: Data Sources
+        st.markdown("<div class='about-section'>", unsafe_allow_html=True)
+        st.markdown("<h2>Data Sources</h2>", unsafe_allow_html=True)
+        st.write("""
+        Our application relies on the following data sources to ensure accuracy and relevance:
+        - Official HDB website: [www.hdb.gov.sg](https://www.hdb.gov.sg)
+        - Data.gov.sg for HDB resale transaction data
+        """)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+        # Section 4: Features
+        st.markdown("<div class='about-section'>", unsafe_allow_html=True)
+        st.markdown("<h2>Features</h2>", unsafe_allow_html=True)
+        
+        features = [
+            {
+                "title": "HDB Resale Chatbot (Rina)",
+                "description": [
+                    "AI-powered assistant to answer user queries.",
+                    "Utilizes natural language processing to understand and respond to questions.",
+                    "Provides information based on the latest HDB guidelines and procedures."
+                ]
+            },
+            {
+                "title": "HDB Resale Flat Search",
+                "description": [
+                    "Interactive tool to search for resale flats within a specified budget.",
+                    "Filters for town, flat type, and other preferences.",
+                    "Displays relevant property details and transaction history."
+                ]
+            },
+            {
+                "title": "Data Visualizations",
+                "description": [
+                    "Price distribution charts.",
+                    "Average price by town comparisons.",
+                    "Price vs. floor area scatter plots."
+                ]
+            },
+            {
+                "title": "Methodology",
+                "description": [
+                    "Detailed explanation of our data processing and analysis methods.",
+                    "Flowcharts illustrating the application's processes."
+                ]
+            }
+        ]
+    
+        for feature in features:
+            st.markdown(f"**{feature['title']}**:")
+            for desc in feature["description"]:
+                st.markdown(f"- {desc}")
+        
+        st.markdown("</div>", unsafe_allow_html=True)
 
     elif page == "Methodology":
         st.write("""
