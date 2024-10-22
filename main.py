@@ -15,6 +15,7 @@ from datetime import datetime
 from urllib.parse import urljoin
 import time
 import csv
+import re
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -157,7 +158,20 @@ def check_password():
 # Function to handle user feedback
 def handle_feedback(message_index, feedback):
     st.session_state.feedback[message_index] = feedback
-    st.success(f"Thank you for your feedback! We've recorded your {'positive' if feedback else 'negative'} response.")
+    feedback_type = "positive" if feedback else "negative"
+    st.success(f"Thank you for your {feedback_type} feedback! We've recorded your response.")
+
+    # Here you can add code to store the feedback in a database or file
+    # For example:
+    # store_feedback(message_index, feedback, st.session_state.chat_history[message_index])
+
+    # You can also trigger actions based on the feedback
+    if not feedback:
+        st.info("We're sorry to hear that. Would you like to provide more detailed feedback?")
+        detailed_feedback = st.text_area("Please tell us how we can improve:", key=f"detailed_feedback_{message_index}")
+        if detailed_feedback:
+            # Store or process the detailed feedback
+            st.success("Thank you for your detailed feedback. We'll use it to improve our responses.")
 
 # Show the page selection sidebar
 page = st.sidebar.selectbox("Select a page", ["Home", "About Us", "Methodology", "HDB Resale Chatbot", "HDB Resale Flat Search"])
@@ -480,7 +494,7 @@ else:
                     hoverlabel=dict(bgcolor="white", font_size=12)
                 )
                 fig_area.update_traces(hovertemplate="Floor Area: %{x} sqm<br>Price: $%{y:,.0f}<br>Flat Type: %{marker.color}")
-                st.plotly_chart(fig_area) 
+                st.plotly_chart(fig_area)
 
             else:
                 st.write("No flats found within your budget and preferences.")
