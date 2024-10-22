@@ -338,7 +338,11 @@ if not check_password():
     st.write("Please enter the correct password above to access the content.")
 else:
     if page == "Home":
-        st.write("""
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/hdb_logo.png", use_column_width=True)
+        with col2:
+            st.write("""
         # Welcome to the HDB Resale Guide
 
         This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
@@ -377,10 +381,10 @@ else:
         # About Us
 
         ## Project Scope
-        Our HDB Resale Guide is a comprehensive tool designed to simplify the process of buying a resale HDB flat in Singapore. We aim to provide accurate, up-to-date information and interactive tools to assist potential buyers in making informed decisions.
+        HDB Resale Guide is a comprehensive tool designed to simplify the process of buying a resale HDB flat in Singapore. We aim to provide accurate, up-to-date information and interactive tools to assist potential buyers in making informed decisions.
 
         ## Objectives
-        1. To demystify the HDB resale process for potential buyers.
+        1. To simplify the HDB resale process for potential buyers.
         2. To provide an AI-powered assistant capable of answering specific questions about HDB resale procedures.
         3. To offer a user-friendly interface for searching available HDB resale flats based on budget and preferences.
         4. To present data-driven insights into the HDB resale market trends.
@@ -389,7 +393,6 @@ else:
         Our application relies on the following data sources to ensure accuracy and relevance:
         - Official HDB website (www.hdb.gov.sg)
         - Data.gov.sg for HDB resale transaction data
-        - HDB press releases and official announcements
 
         ## Features
         1. **HDB Resale Chatbot (Rina)**:
@@ -407,11 +410,10 @@ else:
           - Average price by town comparisons
           - Price vs. floor area scatter plots
 
-        4. **Methodology Transparency**:
+        4. **Methodology**:
           - Detailed explanation of our data processing and analysis methods
           - Flowcharts illustrating the application's processes
 
-        We are committed to providing a valuable resource for anyone navigating the HDB resale market, combining the latest technology with comprehensive, reliable information.
         """)
 
     elif page == "Methodology":
@@ -431,6 +433,10 @@ else:
           - Fallback JSON document (if web scraping yields no results)
         4. The retrieved context and user query are used to generate a response.
         5. The response is displayed to the user in the chat interface.
+        6. User can provide feedback using thumbs up (positive) or thumbs down (negative) buttons for each response. 
+          - For negative feedback, users can specify the type of issue (e.g. "Too brief", "Too vague", "Not relevant", "Incorrect information") and provide additional comments. 
+        7. Chatbot responses will be dynamically modified according to user feedback. 
+          - Based on the feedback, the system adjusts the prompt template used to generate responses. For example, if the feedback states that the response is "too brief", it adjusts the prompt to encourage more detailed responses. If the feedback states that the response is "too vague", it adjusts for more specific and concrete information.
 
         ### Data Flow:
         User Input → Query Processing → Document Retrieval → Context + Query to LLM → Response Generation → Display to User
@@ -450,9 +456,10 @@ else:
 
         ## Implementation Details
 
-        - Web Scraping: We use BeautifulSoup to scrape the official HDB website daily.
-        - Data Processing: Pandas is used for data cleaning and manipulation.
-        - Language Model: We utilize the GPT-4o-mini model via the Langchain library.
+        - Web Scraping: BeautifulSoup is used to scrape the official HDB website daily. Target data includes policies, procedures and FAQs. 
+        - Document retrieval: Based on retrieval-augmented generation (RAG) approach. Relevant information are retrieved from: (1) processed and indexed scraped HDB website content, and (2) fallback on JSON document (if webscraping yields no results)
+        - Data Processing: Pandas is used for data cleaning, manipulation and analysis. 
+        - Language Model: Based on the GPT-4o-mini model, accessed via the Langchain library. This model uses the retrieved context and user query to formulate answers. 
         - Visualization: Plotly Express is used for creating interactive charts and graphs.
         - Data Storage: Scraped data is stored in CSV format for easy access and processing.
 
@@ -460,18 +467,19 @@ else:
 
         - User inputs are sanitized to prevent injection attacks.
         - The application is password-protected to control access.
-        - We do not store personal user data or chat histories beyond the current session.
+        - Personal user data or chat histories will not be stored beyond the current session.
 
         ## Limitations and Future Improvements
 
         - The chatbot's knowledge is limited to its training data and may not cover very recent changes.
         - The flat search feature relies on historical data and may not reflect real-time availability.
-        - Future versions aim to incorporate real-time data feeds and more advanced predictive analytics.
+        - Future versions aim to incorporate real-time data feeds, implement predictive analytics for price forecasting, and expand the chatbot's capabilities to handle more complex queries and scenarios.
         """)
 
         # Flowchart for Use Cases
         st.write("## Flowchart for Use Cases:")
-        st.image("methodology_flowchart.png", caption="Detailed Flowchart of Application Processes")
+        st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/flowchart1.png", caption="Flowchart of HDB Resale Chatbot")
+        st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/flowchart2.png", caption="Flowchart of HDB Resale Flat Search")
 
     elif page == "HDB Resale Chatbot":
         col1, col2 = st.columns([1, 3])
