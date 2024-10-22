@@ -192,9 +192,10 @@ def handle_feedback(message_index, feedback):
 
         detailed_feedback = st.text_area("Additional comments (optional):", key=f"detailed_feedback_{message_index}")
         if st.button("Submit Feedback", key=f"submit_feedback_{message_index}"):
-            # Only update the feedback types counter when the user submits
+            # Initialize feedback_types if it doesn't exist
             if 'feedback_types' not in st.session_state:
                 st.session_state.feedback_types = Counter()
+            # Update the feedback types counter
             st.session_state.feedback_types[feedback_type] += 1
 
             log_feedback(message, response, feedback, feedback_type, detailed_feedback)
@@ -276,7 +277,7 @@ def analyse_feedback():
         for feedback_type, count in st.session_state.feedback_types.items():
             st.text(f"- {feedback_type}: {count}")
 
-        st.info("We're using this feedback to improve our responses.")
+    st.info("We're using this feedback to improve our responses.")
 
     # Display recent feedback (both positive and negative)
     st.subheader("Recent Feedback")
