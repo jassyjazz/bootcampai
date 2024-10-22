@@ -17,7 +17,7 @@ import time
 import csv
 import re
 from functools import lru_cache
-from collections import Counter
+from collections import Counter, defaultdict
 
 # Initialize session state
 if 'authenticated' not in st.session_state:
@@ -29,7 +29,7 @@ if 'feedback' not in st.session_state:
 if 'feedback_count' not in st.session_state:
     st.session_state.feedback_count = {'positive': 0, 'negative': 0}
 if 'feedback_types' not in st.session_state:
-    st.session_state.feedback_types = Counter()
+    st.session_state.feedback_types = defaultdict(int)
 
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
@@ -192,9 +192,6 @@ def handle_feedback(message_index, feedback):
 
         detailed_feedback = st.text_area("Additional comments (optional):", key=f"detailed_feedback_{message_index}")
         if st.button("Submit Feedback", key=f"submit_feedback_{message_index}"):
-            # Initialize feedback_types if it doesn't exist
-            if 'feedback_types' not in st.session_state:
-                st.session_state.feedback_types = Counter()
             # Update the feedback types counter
             st.session_state.feedback_types[feedback_type] += 1
 
@@ -270,7 +267,7 @@ def analyse_feedback():
     with col2:
         st.metric("Negative Feedback", st.session_state.feedback_count['negative'])
 
-    if st.session_state.feedback_count['negative'] > 0 and 'feedback_types' in st.session_state:
+    if st.session_state.feedback_count['negative'] > 0:
         st.warning(f"There are {st.session_state.feedback_count['negative']} instances of negative feedback. Here's the breakdown:")
 
         # Display feedback types
