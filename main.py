@@ -170,8 +170,13 @@ def handle_feedback(message_index, feedback):
     st.session_state.feedback_count[feedback_type] += 1
 
     chat_entry = st.session_state.chat_history[message_index]
-    message = chat_entry['message']
-    response = chat_entry['response']
+
+    # Handle both tuple and dictionary formats
+    if isinstance(chat_entry, tuple):
+        message, response = chat_entry
+    else:
+        message = chat_entry.get('message')
+        response = chat_entry.get('response')
 
     if not feedback:
         st.info("We're sorry to hear that. Please tell us what was wrong with the response:")
