@@ -668,30 +668,27 @@ else:
                     hoverlabel=dict(bgcolor="white", font_size=12)
                 )
 
-                # Create a custom hover text
-                filtered_df['hover_text'] = filtered_df.apply(
-                    lambda row: f"Floor Area: {row['floor_area_sqm']} sqm<br>Price: ${row['resale_price']:,.0f}<br>Flat Type: {row['flat_type']}",
-                    axis=1
-                )
-
-                # Get the colour discrete map from the original figure
-                color_discrete_map = {}
-                for trace in fig_area.data:
-                    color_discrete_map[trace.name] = trace.marker.color
-
                 # Clear the existing traces and add new ones with custom hover text
                 fig_area.data = []
                 for flat_type in filtered_df['flat_type'].unique():
                     df_type = filtered_df[filtered_df['flat_type'] == flat_type]
-                    fig_area.add_trace(
-                        px.scatter(df_type, x="floor_area_sqm", y="resale_price", color="flat_type",
-                                  color_discrete_map=color_discrete_map).data[0]
+
+                    hover_text = df_type.apply(
+                        lambda row: f"Floor Area: {row['floor_area_sqm']} sqm<br>Price: ${row['resale_price']:,.0f}<br>Flat Type: {row['flat_type']}",
+                        axis=1
                     )
 
-                fig_area.update_traces(
-                    hovertemplate="%{customdata}",
-                    customdata=filtered_df['hover_text']
-                )
+                    fig_area.add_trace(
+                        go.Scatter(
+                            x=df_type['floor_area_sqm'],
+                            y=df_type['resale_price'],
+                            mode='markers',
+                            name=flat_type,
+                            text=hover_text,
+                            hoverinfo='text',
+                            marker=dict(size=8)
+                        )
+                    )
 
                 st.plotly_chart(fig_area)
 
