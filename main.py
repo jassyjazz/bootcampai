@@ -342,13 +342,12 @@ else:
         with col1:
             st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/hdb_logo.png", use_column_width=True)
         with col2:
-            st.write("""
-            # Welcome to the HDB Resale Guide
+            st.write("# Welcome to the HDB Resale Guide")
 
-            This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
-            """)
+        st.write("""
+        This application is designed to assist you in navigating the process of buying an HDB flat in the resale market. Whether you're a first-time buyer or looking to upgrade, our tools and resources are here to help you make informed decisions.
+        """)
 
-        # Moving back to a single column layout for the rest of the content
         st.write("## Key Features:")
         st.write("""
         1. **HDB Resale Chatbot**: Interact with Rina, our AI assistant, to get answers to your questions about the HDB resale process.
@@ -356,8 +355,8 @@ else:
         3. **Comprehensive Information**: Access detailed guides and up-to-date information about the HDB resale market.
             """)
 
-        with st.expander("How to Use This App"):
-            st.write("""        
+        st.write("## How to Use This App")
+        st.write("""      
         1. Explore the different pages using the sidebar navigation.
         2. Chat with Rina to get personalized answers to your HDB resale questions.
         3. Use the Resale Flat Search tool to find properties within your budget.
