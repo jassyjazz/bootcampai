@@ -151,16 +151,20 @@ chain = (
 
 # Function to log feedback
 def log_feedback(message, response, feedback, feedback_type=None, detailed_feedback=None):
-    feedback_log = {
-        'timestamp': datetime.now().isoformat(),
-        'message': message,
-        'response': response,
-        'feedback': feedback,
-        'feedback_type': feedback_type,
-        'detailed_feedback': detailed_feedback
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    feedback_entry = {
+        "timestamp": timestamp,
+        "message": message,
+        "response": response,
+        "feedback": feedback,
     }
+    if not feedback:  # Only include feedback_type for negative feedback
+        feedback_entry["feedback_type"] = feedback_type
+    if detailed_feedback:
+        feedback_entry["detailed_feedback"] = detailed_feedback
+
     with open('feedback_log.json', 'a') as f:
-        json.dump(feedback_log, f)
+        json.dump(feedback_entry, f)
         f.write('\n')
 
 # Function to handle user feedback
@@ -283,9 +287,9 @@ def analyse_feedback():
             st.text(f"User: {item['message']}")
             st.text(f"Rina: {item['response']}")
             st.text(f"Feedback: {'Positive' if item['feedback'] else 'Negative'}")
-            if item['feedback_type']:
-                st.text(f"Feedback Type: {item['feedback_type']}")
-            if item['detailed_feedback']:
+            if not item['feedback']:  # Only show feedback type for negative feedback
+                st.text(f"Feedback Type: {item.get('feedback_type', 'Not specified')}")
+            if item.get('detailed_feedback'):
                 st.text(f"Detailed Feedback: {item['detailed_feedback']}")
 
 # Password Protection
