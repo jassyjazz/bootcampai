@@ -340,7 +340,7 @@ else:
     if page == "Home":
         col1, col2 = st.columns([1, 2])
         with col1:
-            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/hdb_logo.png", use_column_width=True)
+            st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/hdb_logo.png", width=150)
         with col2:
             st.write("# Welcome to the HDB Resale Guide")
 
@@ -355,7 +355,7 @@ else:
         3. **Comprehensive Information**: Access detailed guides and up-to-date information about the HDB resale market.
             """)
 
-        st.write("## How to Use This App")
+        st.write("## How to Use This App:")
         st.write("""      
         1. Explore the different pages using the sidebar navigation.
         2. Chat with Rina to get personalized answers to your HDB resale questions.
@@ -398,23 +398,23 @@ else:
 
         ## Features
         1. **HDB Resale Chatbot (Rina)**:
-          - AI-powered assistant to answer user queries
-          - Utilizes natural language processing to understand and respond to questions
-          - Provides information based on the latest HDB guidelines and procedures
+            - AI-powered assistant to answer user queries
+            - Utilizes natural language processing to understand and respond to questions
+            - Provides information based on the latest HDB guidelines and procedures
 
         2. **HDB Resale Flat Search**:
-          - Interactive tool to search for resale flats within a specified budget
-          - Filters for town, flat type, and other preferences
-          - Displays relevant property details and transaction history
+            - Interactive tool to search for resale flats within a specified budget
+            - Filters for town, flat type, and other preferences
+            - Displays relevant property details and transaction history
 
         3. **Data Visualizations**:
-          - Price distribution charts
-          - Average price by town comparisons
-          - Price vs. floor area scatter plots
+            - Price distribution charts
+            - Average price by town comparisons
+            - Price vs. floor area scatter plots
 
         4. **Methodology**:
-          - Detailed explanation of our data processing and analysis methods
-          - Flowcharts illustrating the application's processes
+            - Detailed explanation of our data processing and analysis methods
+            - Flowcharts illustrating the application's processes
 
         """)
 
@@ -431,14 +431,14 @@ else:
         1. User inputs a question about the HDB resale process.
         2. The query is passed to our Langchain model.
         3. Relevant documents are retrieved from:
-          - Scraped HDB website content
-          - Fallback JSON document (if web scraping yields no results)
+            - Scraped HDB website content
+            - Fallback JSON document (if web scraping yields no results)
         4. The retrieved context and user query are used to generate a response.
         5. The response is displayed to the user in the chat interface.
         6. User can provide feedback using thumbs up (positive) or thumbs down (negative) buttons for each response. 
-          - For negative feedback, users can specify the type of issue (e.g. "Too brief", "Too vague", "Not relevant", "Incorrect information") and provide additional comments. 
+            - For negative feedback, users can specify the type of issue (e.g. "Too brief", "Too vague", "Not relevant", "Incorrect information") and provide additional comments. 
         7. Chatbot responses will be dynamically modified according to user feedback. 
-          - Based on the feedback, the system adjusts the prompt template used to generate responses. For example, if the feedback states that the response is "too brief", it adjusts the prompt to encourage more detailed responses. If the feedback states that the response is "too vague", it adjusts for more specific and concrete information.
+            - Based on the feedback, the system adjusts the prompt template used to generate responses. For example, if the feedback states that the response is "too brief", it adjusts the prompt to encourage more detailed responses. If the feedback states that the response is "too vague", it adjusts for more specific and concrete information.
 
         ### Data Flow:
         User Input → Query Processing → Document Retrieval → Context + Query to LLM → Response Generation → Display to User
