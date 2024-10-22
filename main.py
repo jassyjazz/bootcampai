@@ -667,8 +667,7 @@ else:
                     hovermode="closest",
                     hoverlabel=dict(bgcolor="white", font_size=12)
                 )
-                fig_area.update_traces(hovertemplate="Floor Area: %{x} sqm<br>Price: $%{y:,.0f}<br>Flat Type: %{customdata[0]}")
-                fig_area.update_traces(customdata=filtered_df[['flat_type']])
+                fig_area.update_traces(hovertemplate="Floor Area: %{x} sqm<br>Price: $%{y:,.0f}<br>Flat Type: %{marker.color}")
                 st.plotly_chart(fig_area)
 
             else:
