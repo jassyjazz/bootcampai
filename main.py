@@ -377,7 +377,6 @@ else:
             """)
 
     elif page == "About Us":
-    elif page == "About Us":
         # Custom CSS for styling the About Us page
         st.markdown(
             """
