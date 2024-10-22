@@ -674,15 +674,18 @@ else:
                     axis=1
                 )
 
-                # Get the colour map from the original figure
-                color_map = fig_area.data[0].marker.color
+                # Get the colour discrete map from the original figure
+                color_discrete_map = {}
+                for trace in fig_area.data:
+                    color_discrete_map[trace.name] = trace.marker.color
 
                 # Clear the existing traces and add new ones with custom hover text
                 fig_area.data = []
                 for flat_type in filtered_df['flat_type'].unique():
                     df_type = filtered_df[filtered_df['flat_type'] == flat_type]
                     fig_area.add_trace(
-                        px.scatter(df_type, x="floor_area_sqm", y="resale_price", color="flat_type", color_discrete_map={flat_type: color_map[flat_type]}).data[0]
+                        px.scatter(df_type, x="floor_area_sqm", y="resale_price", color="flat_type",
+                                  color_discrete_map=color_discrete_map).data[0]
                     )
 
                 fig_area.update_traces(
