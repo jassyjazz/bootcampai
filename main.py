@@ -437,7 +437,7 @@ else:
             - Based on the feedback, the system adjusts the prompt template used to generate responses. For example, if the feedback states that the response is "too brief", it adjusts the prompt to encourage more detailed responses. If the feedback states that the response is "too vague", it adjusts for more specific and concrete information.
 
         ### Data Flow:
-        User Input → Query Processing → Document Retrieval → Context + Query to LLM → Response Generation → Display to User
+        User Input → Query Processing → Document Retrieval → Context + Query to LLM → Response Generation → Display to User → Feedback Collection → Chatbot modify responses based on feedback, if positive feedback ratio falls below 70%
 
         ## 2. HDB Resale Flat Search
 
@@ -476,8 +476,8 @@ else:
 
         # Flowchart for Use Cases
         st.write("## Flowchart for Use Cases:")
-        st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/flowchart1.png", caption="Flowchart of HDB Resale Chatbot")
-        st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/flowchart2.png", caption="Flowchart of HDB Resale Flat Search")
+        st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/flowchart1.png", caption="HDB Resale Chatbot")
+        st.image("https://raw.githubusercontent.com/jassyjazz/bootcampai/main/flowchart2.png", caption="HDB Resale Flat Search")
 
     elif page == "HDB Resale Chatbot":
         col1, col2 = st.columns([1, 3])
