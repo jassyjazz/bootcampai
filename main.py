@@ -401,10 +401,7 @@ else:
             """,
             unsafe_allow_html=True
         )
-    
-        # Title for the About Us page
-        st.markdown("<h1 class='about-title'>About Us</h1>", unsafe_allow_html=True)
-    
+
         # Section 1: Project Scope
         st.markdown("<div class='about-section'>", unsafe_allow_html=True)
         st.markdown("<h2>Project Scope</h2>", unsafe_allow_html=True)
