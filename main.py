@@ -29,6 +29,8 @@ if 'feedback' not in st.session_state:
     st.session_state.feedback = {}
 if 'feedback_count' not in st.session_state:
     st.session_state.feedback_count = {'positive': 0, 'negative': 0}
+if 'feedback_data' not in st.session_state:
+    st.session_state.feedback_data = pd.DataFrame(columns=['message', 'feedback', 'detailed_feedback'])
 
 # Function to scrape HDB website content
 @st.cache_data(ttl=86400)
@@ -122,42 +124,33 @@ def retrieve_relevant_documents(user_prompt):
         st.error(f"Error retrieving documents: {str(e)}")
         return "Error occurred while retrieving documents."
 
-# Initialize the LLM with gpt-4o-mini model
 llm = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0,
     openai_api_key=st.secrets["general"]["OPENAI_API_KEY"]
 )
 
-            # Update the prompt template with improvement areas
-            global prompt_template
-            improvement_areas = " ".join(top_issues['message'].tolist())
-            prompt_template = PromptTemplate(
-                input_variables=["relevant_docs", "question", "improvement_areas"],
-                template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
-                         'Provide accurate information based on the following context:\n\n'
-                         '{relevant_docs}\n\n'
-                         'Human: {question}\n'
-                         'Improvement areas to focus on: {improvement_areas}\n'
-                         'Rina: '
-            )
+# Update the prompt template with improvement areas
+global prompt_template
+improvement_areas = " ".join(top_issues['message'].tolist())
+prompt_template = PromptTemplate(
+    input_variables=["relevant_docs", "question", "improvement_areas"],
+    template='You are Rina, an AI assistant guiding users through the HDB resale process in Singapore. '
+             'Provide accurate information based on the following context:\n\n'
+             '{relevant_docs}\n\n'
+             'Human: {question}\n'
+             'Improvement areas to focus on: {improvement_areas}\n'
+             'Rina: '
+)
 
-            # Update the chain with the new prompt template
-            global chain
-            chain = (
-                {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough(), "improvement_areas": lambda _: improvement_areas}
-                | prompt_template
-                | llm
-                | StrOutputParser()
-            )
-
-    # Periodically save feedback data to a CSV file
-    if len(st.session_state.feedback_data) % 10 == 0:  # Save every 10 feedback entries
-        st.session_state.feedback_data.to_csv('feedback_data.csv', index=False)
-
-# Initialize feedback data storage
-if 'feedback_data' not in st.session_state:
-    st.session_state.feedback_data = pd.DataFrame(columns=['message', 'feedback', 'detailed_feedback'])
+# Update the chain with the new prompt template
+global chain
+chain = (
+    {"relevant_docs": retrieve_relevant_documents, "question": RunnablePassthrough(), "improvement_areas": lambda _: improvement_areas}
+    | prompt_template
+    | llm
+    | StrOutputParser()
+)
 
 def handle_feedback(message_index, feedback):
     st.session_state.feedback[message_index] = feedback
@@ -205,6 +198,14 @@ def improve_chatbot_responses():
                 st.write(f"- {issue['message'][:100]}...")
                 if issue['detailed_feedback']:
                     st.write(f"  Detailed feedback: {issue['detailed_feedback']}")
+                    
+# Periodically save feedback data to a CSV file
+if len(st.session_state.feedback_data) % 10 == 0:  # Save every 10 feedback entries
+    st.session_state.feedback_data.to_csv('feedback_data.csv', index=False)
+
+# Initialize feedback data storage
+if 'feedback_data' not in st.session_state:
+    st.session_state.feedback_data = pd.DataFrame(columns=['message', 'feedback', 'detailed_feedback'])
 
 # Password Protection
 def check_password():
